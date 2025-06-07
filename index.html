@@ -1,67 +1,90 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D STL Viewer | 3DPrintTech</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Viewer | 3DPrintTech</title>
   <style>
     body {
       margin: 0;
-      overflow: hidden;
-      background: #111;
       font-family: 'Orbitron', sans-serif;
+      background-color: #000;
+      color: #e0e0e0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
     }
-    #upload, #colorPicker {
-      position: absolute;
-      top: 10px;
-      z-index: 10;
-      padding: 0.5rem;
-      border-radius: 6px;
+    .container {
+      width: 960px;
+      background: rgba(0, 0, 0, 0.85);
+      padding: 1.5rem;
+      border-radius: 20px;
+      box-shadow: 0 0 20px rgba(0,255,231,0.3);
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    input[type="file"], input[type="color"] {
+      padding: 0.6rem 1rem;
       font-weight: bold;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
     }
-    #upload {
-      left: 150px;
-      background: #00ffe7;
-    }
-    #colorPicker {
-      left: 10px;
+    #viewer {
+      width: 100%;
+      height: 500px;
+      border: 2px solid #00e0ff;
+      border-radius: 10px;
     }
   </style>
 </head>
 <body>
-  <input type="color" id="colorPicker" value="#00e0ff">
-  <input type="file" id="upload" accept=".stl">
+  <div class="container">
+    <h2><span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">tech</span> – Náhled STL modelu</h2>
+    <div class="controls">
+      <input type="file" id="upload" accept=".stl">
+      <input type="color" id="colorPicker" value="#00e0ff">
+    </div>
+    <div id="viewer"></div>
+  </div>
 
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
     import { STLLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/STLLoader.js';
     import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js';
 
-    let scene, camera, renderer, controls;
-    let mesh, material;
+    let scene, camera, renderer, controls, mesh, material;
 
     init();
     animate();
 
     function init() {
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x1e1e1e);
+      const container = document.getElementById('viewer');
 
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      // Setup
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x111111);
+
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+
+      camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
       camera.position.set(0, 0, 100);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      document.body.appendChild(renderer.domElement);
+      renderer.setSize(width, height);
+      container.appendChild(renderer.domElement);
 
       controls = new OrbitControls(camera, renderer.domElement);
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-      directionalLight.position.set(1, 1, 1).normalize();
-      scene.add(ambientLight, directionalLight);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+      const light = new THREE.DirectionalLight(0xffffff, 0.8);
+      light.position.set(1, 1, 1).normalize();
+      scene.add(light);
 
       material = new THREE.MeshPhongMaterial({ color: 0x00e0ff });
 
@@ -84,14 +107,17 @@
       });
 
       document.getElementById("colorPicker").addEventListener("input", function (event) {
-        const color = event.target.value;
-        material.color.set(color);
+        if (material) {
+          material.color.set(event.target.value);
+        }
       });
 
       window.addEventListener("resize", () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(width, height);
       });
     }
 
