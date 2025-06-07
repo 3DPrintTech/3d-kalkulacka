@@ -1,70 +1,50 @@
-
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3D Kalkulačka | 3DPrintTech</title>
+  <meta charset="UTF-8">
+  <title>3D Model Viewer</title>
   <style>
-    body {
-      margin: 0;
-      font-family: 'Orbitron', sans-serif;
-      background: url('https://3dprinttech.github.io/3d-kalkulacka/laborator-bg.jpg.png') no-repeat center center fixed;
-      background-size: cover;
-      color: #e0e0e0;
-    }
-    .container {
-      max-width: 960px;
-      margin: 2rem auto;
-      padding: 1rem;
-      background-color: rgba(0, 0, 0, 0.8);
-      border-radius: 20px;
-      box-shadow: 0 0 30px rgba(0,255,231,0.3);
-    }
-    #stl_viewer {
-      width: 100%;
-      height: 480px;
-      border: 2px solid #00e0ff;
-      border-radius: 12px;
-      margin-bottom: 1rem;
-    }
-    input[type="file"] {
-      background: linear-gradient(90deg, #00ffe7, #ff00cc);
-      padding: 1rem;
-      color: black;
-      font-weight: bold;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      width: 100%;
-      margin-bottom: 1rem;
-    }
+    body { margin: 0; }
+    canvas { display: block; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/viewstl@latest/dist/viewstl.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h1 style="text-align:center;">
-      <span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">tech</span> – Náhled modelu
-    </h1>
-    <div id="stl_viewer"></div>
-    <input type="file" id="upload" accept=".stl" />
-  </div>
-
+  <input type="file" id="upload" accept=".stl" />
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/STLLoader.js"></script>
   <script>
-    const viewer = new StlViewer(document.getElementById("stl_viewer"), {
-      autoResize: true,
-      backgroundColor: "#1e1e1e"
-    });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-    document.getElementById("upload").addEventListener("change", function (evt) {
-      const file = evt.target.files[0];
-      if (file && file.name.endsWith(".stl")) {
-        const url = URL.createObjectURL(file);
-        viewer.clean();
-        viewer.addModel({ id: 0, filename: url, color: "#00e0ff" });
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(0, 0, 1).normalize();
+    scene.add(light);
+
+    const loader = new THREE.STLLoader();
+
+    document.getElementById('upload').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.addEventListener('load', function(event) {
+          const geometry = loader.parse(event.target.result);
+          const material = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+          camera.position.z = 100;
+          animate();
+        });
+        reader.readAsArrayBuffer(file);
       }
     });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
   </script>
 </body>
 </html>
