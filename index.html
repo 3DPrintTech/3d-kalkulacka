@@ -1,70 +1,181 @@
-
 <!DOCTYPE html>
 <html lang="cs">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>3D Kalkulačka | 3DPrintTech</title>
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    canvas { display: block; }
-    #colorPicker, #upload {
-      position: absolute;
-      z-index: 10;
-      top: 10px;
-      padding: 0.5rem;
-      background: white;
+    body {
+      margin: 0;
+      font-family: 'Orbitron', sans-serif;
+      background: #0e0e0e;
+      color: #e0e0e0;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background-color: rgba(0, 0, 0, 0.9);
+      border-radius: 15px;
+      box-shadow: 0 0 30px rgba(0,255,231,0.3);
+    }
+    h1 {
+      text-align: center;
+      background: linear-gradient(90deg, #ff0040, #00e0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 2.5rem;
+    }
+    #viewer {
+      width: 100%;
+      height: 500px;
+      border: 2px solid #00e0ff;
+      border-radius: 10px;
+      margin-bottom: 1rem;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .controls input[type="file"],
+    .controls input[type="color"] {
+      flex: 1;
+      padding: 1rem;
+      font-weight: bold;
       border-radius: 10px;
       border: none;
       cursor: pointer;
     }
-    #colorPicker { left: 10px; }
-    #upload { left: 140px; }
+    .form-grid {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+    .form-grid > div {
+      flex: 1;
+      min-width: 250px;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+    }
+    select, input[type="text"], input[type="email"] {
+      width: 100%;
+      padding: 0.5rem;
+      border: 2px solid #00e0ff;
+      border-radius: 8px;
+      background-color: #1a1a1a;
+      color: #00e0ff;
+    }
+    .btn {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: linear-gradient(90deg, #00ffe7, #ff00cc);
+      color: black;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      width: 100%;
+      cursor: pointer;
+    }
+    .results {
+      margin-top: 2rem;
+      padding: 1rem;
+      background-color: #121212;
+      border: 2px solid #00e0ff;
+      border-radius: 10px;
+    }
   </style>
 </head>
 <body>
-  <input type="color" id="colorPicker" value="#00e0ff" />
-  <input type="file" id="upload" accept=".stl" />
+  <div class="container">
+    <h1><span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">Tech</span> Kalkulačka</h1>
 
-  <script src="./libs/three.min.js"></script>
+    <div id="viewer"></div>
+
+    <div class="controls">
+      <input type="file" id="upload" accept=".stl" />
+      <input type="color" id="colorPicker" value="#00e0ff" />
+    </div>
+
+    <div class="form-grid">
+      <div>
+        <label>Materiál</label>
+        <select id="material">
+          <option value="1.24">PLA</option>
+          <option value="1.27">PETG</option>
+          <option value="1.04">ABS</option>
+          <option value="1.20">TPU</option>
+        </select>
+
+        <label>Pevnost</label>
+        <select id="strength">
+          <option value="0.1">Nízká (dekorace)</option>
+          <option value="0.3">Střední</option>
+          <option value="1.0">Vysoká</option>
+        </select>
+
+        <label>Složitost</label>
+        <select id="complexity">
+          <option value="1">Jednoduchá</option>
+          <option value="1.2">Střední</option>
+          <option value="1.5">Složitá</option>
+        </select>
+
+        <button class="btn" onclick="calculate()">🚀 Spočítat</button>
+      </div>
+
+      <div>
+        <label>Jméno</label>
+        <input type="text" id="name" />
+
+        <label>Email</label>
+        <input type="email" id="email" />
+
+        <button class="btn">📨 Odeslat</button>
+      </div>
+    </div>
+
+    <div class="results" id="results">
+      Výsledek výpočtu se zobrazí zde...
+    </div>
+  </div>
+
+  <!-- THREE.JS & MODULES -->
   <script type="module">
     import * as THREE from './libs/three.module.js';
     import { OrbitControls } from './libs/OrbitControls.js';
     import { STLLoader } from './libs/STLLoader.js';
 
-    let scene = new THREE.Scene();
-    let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-    camera.position.z = 100;
+    let scene, camera, renderer, controls, material, mesh;
 
-    let renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    const container = document.getElementById('viewer');
 
-    let controls = new OrbitControls(camera, renderer.domElement);
+    function initViewer() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1e1e1e);
 
-    let material = new THREE.MeshPhongMaterial({ color: 0x00e0ff });
-    let mesh;
+      camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      camera.position.set(0, 0, 100);
 
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(0, 0, 1).normalize();
-    scene.add(light);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      container.appendChild(renderer.domElement);
 
-    const loader = new STLLoader();
+      controls = new OrbitControls(camera, renderer.domElement);
 
-    document.getElementById('upload').addEventListener('change', function (event) {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const geometry = loader.parse(e.target.result);
-        if (mesh) scene.remove(mesh);
-        mesh = new THREE.Mesh(geometry, material);
-        scene.add(mesh);
-      };
-      reader.readAsArrayBuffer(file);
-    });
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(0, 0, 100).normalize();
+      scene.add(light);
 
-    document.getElementById('colorPicker').addEventListener('input', function (e) {
-      if (material) material.color.set(e.target.value);
-    });
+      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+
+      material = new THREE.MeshPhongMaterial({ color: 0x00e0ff });
+
+      animate();
+    }
 
     function animate() {
       requestAnimationFrame(animate);
@@ -72,7 +183,57 @@
       renderer.render(scene, camera);
     }
 
-    animate();
+    document.getElementById('upload').addEventListener('change', function (e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const geometry = new STLLoader().parse(event.target.result);
+          if (mesh) scene.remove(mesh);
+          mesh = new THREE.Mesh(geometry, material);
+          geometry.computeBoundingBox();
+          const center = new THREE.Vector3();
+          geometry.boundingBox.getCenter(center);
+          mesh.position.sub(center);
+          scene.add(mesh);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    document.getElementById('colorPicker').addEventListener('input', function (e) {
+      const color = e.target.value;
+      if (material) material.color.set(color);
+    });
+
+    window.addEventListener('resize', () => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    });
+
+    function calculate() {
+      const density = parseFloat(document.getElementById('material').value);
+      const strength = parseFloat(document.getElementById('strength').value);
+      const complexity = parseFloat(document.getElementById('complexity').value);
+      const volume = 30;
+      const pricePerGram = 4;
+
+      const effVol = volume * strength * complexity;
+      const weight = effVol * density;
+      const cost = weight * pricePerGram;
+      const time = Math.ceil(weight * 1.5 + 7);
+
+      document.getElementById('results').innerHTML = `
+        <strong>Hmotnost:</strong> ${weight.toFixed(1)} g<br>
+        <strong>Cena:</strong> ${cost.toFixed(2)} Kč<br>
+        <strong>Čas tisku:</strong> ${time} minut
+      `;
+    }
+
+    initViewer();
   </script>
 </body>
 </html>
