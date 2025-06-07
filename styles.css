@@ -1,0 +1,33 @@
+body {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  background: black;
+  color: white;
+}
+.container {
+  max-width: 960px;
+  margin: auto;
+  padding: 1rem;
+}
+.top {
+  display: flex;
+  justify-content: space-between;
+}
+.visual {
+  width: 640px;
+  height: 540px;
+  background: url('default.jpg') no-repeat center center;
+  background-size: cover;
+}
+.results {
+  width: 300px;
+  margin-left: 1rem;
+}
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+.options, .user {
+  width: 48%;
+}
