@@ -8,232 +8,231 @@
     body {
       margin: 0;
       font-family: 'Orbitron', sans-serif;
-      background: #0e0e0e;
+      background: url('https://3dprinttech.github.io/3d-kalkulacka/laborator-bg.jpg.png') no-repeat center center fixed;
+      background-size: cover;
       color: #e0e0e0;
     }
-    .container {
-      max-width: 1200px;
+    .wrapper {
+      max-width: 960px;
       margin: 2rem auto;
       padding: 2rem;
-      background-color: rgba(0, 0, 0, 0.9);
-      border-radius: 15px;
+      background-color: rgba(0,0,0,0.8);
+      border-radius: 20px;
       box-shadow: 0 0 30px rgba(0,255,231,0.3);
     }
-    h1 {
+    header {
       text-align: center;
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
       background: linear-gradient(90deg, #ff0040, #00e0ff);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
-      font-size: 2.5rem;
     }
-    #viewer {
-      width: 100%;
-      height: 500px;
-      border: 2px solid #00e0ff;
-      border-radius: 10px;
-      margin-bottom: 1rem;
-    }
-    .controls {
+    .top {
       display: flex;
+      flex-wrap: wrap;
       gap: 1rem;
       margin-bottom: 1rem;
     }
-    .controls input[type="file"],
-    .controls input[type="color"] {
+    .model-preview {
       flex: 1;
-      padding: 1rem;
-      font-weight: bold;
+      height: 300px;
+      background-color: #1f1f1f;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .model-preview img {
+      max-width: 100%;
+      max-height: 100%;
       border-radius: 10px;
+    }
+    .results-box {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .results {
+      background-color: #111;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+    .upload-btn {
+      padding: 1rem;
+      background: linear-gradient(90deg, #00ffe7, #ff00cc);
+      color: #000;
+      font-weight: bold;
       border: none;
+      border-radius: 10px;
+      width: 100%;
       cursor: pointer;
     }
-    .form-grid {
+    form {
       display: flex;
       gap: 2rem;
       flex-wrap: wrap;
       margin-top: 2rem;
     }
-    .form-grid > div {
+    .form-col {
       flex: 1;
-      min-width: 250px;
     }
     label {
       display: block;
       margin-top: 1rem;
+      font-weight: 600;
     }
-    select, input[type="text"], input[type="email"] {
+    select, input {
       width: 100%;
-      padding: 0.5rem;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
       border: 2px solid #00e0ff;
-      border-radius: 8px;
-      background-color: #1a1a1a;
+      border-radius: 10px;
+      background-color: #121212;
       color: #00e0ff;
     }
-    .btn {
+    button.calc-btn, button.send-btn {
       margin-top: 1.5rem;
-      padding: 1rem;
       background: linear-gradient(90deg, #00ffe7, #ff00cc);
-      color: black;
-      font-weight: bold;
       border: none;
-      border-radius: 10px;
-      width: 100%;
-      cursor: pointer;
-    }
-    .results {
-      margin-top: 2rem;
       padding: 1rem;
-      background-color: #121212;
-      border: 2px solid #00e0ff;
       border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      color: black;
+    }
+    #extraFact {
+      margin-top: 0.5rem;
+      font-style: italic;
+      font-size: 0.95rem;
+      color: #ccc;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1><span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">Tech</span> Kalkulačka</h1>
+  <div class="wrapper">
+    <header><span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">Tech</span></header>
 
-    <div id="viewer"></div>
+    <div class="top">
+      <div class="model-preview">
+        <img src="https://3dprinttech.github.io/3d-kalkulacka/model-preview.png" alt="Náhled modelu">
+      </div>
 
-    <div class="controls">
-      <input type="file" id="upload" accept=".stl" />
-      <input type="color" id="colorPicker" value="#00e0ff" />
+      <div class="results-box">
+        <div class="results" id="results">
+          Zde se zobrazí odhad hmotnosti, ceny a času tisku...
+          <div id="extraFact"></div>
+        </div>
+        <button class="upload-btn">📁 Nahraj STL model</button>
+      </div>
     </div>
 
-    <div class="form-grid">
-      <div>
-        <label>Materiál</label>
-        <select id="material">
+    <form>
+      <div class="form-col">
+        <label for="material">Zvol materiál</label>
+        <select id="material" onchange="updateColors()">
           <option value="1.24">PLA</option>
           <option value="1.27">PETG</option>
           <option value="1.04">ABS</option>
           <option value="1.20">TPU</option>
         </select>
 
-        <label>Pevnost</label>
+        <label for="color">Vyber barvu</label>
+        <select id="color"></select>
+
+        <label for="strength">Pevnost</label>
         <select id="strength">
           <option value="0.1">Nízká (dekorace)</option>
-          <option value="0.3">Střední</option>
-          <option value="1.0">Vysoká</option>
+          <option value="0.3">Střední (běžné použití)</option>
+          <option value="1.0">Vysoká (funkční model)</option>
         </select>
 
-        <label>Složitost</label>
+        <label for="complexity">Složitost modelu</label>
         <select id="complexity">
-          <option value="1">Jednoduchá</option>
-          <option value="1.2">Střední</option>
-          <option value="1.5">Složitá</option>
+          <option value="1">Jednoduchý (např. vizitka, držák)</option>
+          <option value="1.2">Středně složitý</option>
+          <option value="1.5">Složitý (socha, figurka, převisy)</option>
         </select>
 
-        <button class="btn" onclick="calculate()">🚀 Spočítat</button>
+        <button type="button" class="calc-btn" onclick="calculate()">🚀 Spočítat</button>
       </div>
-
-      <div>
-        <label>Jméno</label>
+      <div class="form-col">
+        <label for="name">Jméno</label>
         <input type="text" id="name" />
 
-        <label>Email</label>
+        <label for="email">Email</label>
         <input type="email" id="email" />
 
-        <button class="btn">📨 Odeslat</button>
+        <button type="submit" class="send-btn">📨 Odeslat poptávku</button>
       </div>
-    </div>
-
-    <div class="results" id="results">
-      Výsledek výpočtu se zobrazí zde...
-    </div>
+    </form>
   </div>
 
-  <!-- THREE.JS & MODULES -->
-  <script type="module">
-  import * as THREE from './libs/three.module.js';
-  import { OrbitControls } from './libs/OrbitControls.js';
-  import { STLLoader } from './libs/STLLoader.js';
-
-    let scene, camera, renderer, controls, material, mesh;
-
-    const container = document.getElementById('viewer');
-
-    function initViewer() {
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x1e1e1e);
-
-      camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-      camera.position.set(0, 0, 100);
-
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(container.clientWidth, container.clientHeight);
-      container.appendChild(renderer.domElement);
-
-      controls = new OrbitControls(camera, renderer.domElement);
-
-      const light = new THREE.DirectionalLight(0xffffff, 1);
-      light.position.set(0, 0, 100).normalize();
-      scene.add(light);
-
-      scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-
-      material = new THREE.MeshPhongMaterial({ color: 0x00e0ff });
-
-      animate();
-    }
-
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
-
-    document.getElementById('upload').addEventListener('change', function (e) {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (event) {
-          const geometry = new STLLoader().parse(event.target.result);
-          if (mesh) scene.remove(mesh);
-          mesh = new THREE.Mesh(geometry, material);
-          geometry.computeBoundingBox();
-          const center = new THREE.Vector3();
-          geometry.boundingBox.getCenter(center);
-          mesh.position.sub(center);
-          scene.add(mesh);
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
-
-    document.getElementById('colorPicker').addEventListener('input', function (e) {
-      const color = e.target.value;
-      if (material) material.color.set(color);
-    });
-
-    window.addEventListener('resize', () => {
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    });
-
+  <script>
     function calculate() {
-      const density = parseFloat(document.getElementById('material').value);
-      const strength = parseFloat(document.getElementById('strength').value);
+      const baseVolume = 30;
+      const materialDensity = parseFloat(document.getElementById('material').value);
+      const infill = parseFloat(document.getElementById('strength').value);
       const complexity = parseFloat(document.getElementById('complexity').value);
-      const volume = 30;
-      const pricePerGram = 4;
+      const pricePerGram = 4.0;
 
-      const effVol = volume * strength * complexity;
-      const weight = effVol * density;
+      const effectiveVolume = baseVolume * infill * complexity;
+      const weight = effectiveVolume * materialDensity;
       const cost = weight * pricePerGram;
       const time = Math.ceil(weight * 1.5 + 7);
 
-      document.getElementById('results').innerHTML = `
-        <strong>Hmotnost:</strong> ${weight.toFixed(1)} g<br>
-        <strong>Cena:</strong> ${cost.toFixed(2)} Kč<br>
-        <strong>Čas tisku:</strong> ${time} minut
+      let comment = "";
+      if (time <= 60) {
+        comment = "Tisk trvá cca " + time + " minut – ve frontě je i sousedův držák na sprchu 😄";
+      } else if (time <= 120) {
+        comment = "Tisk trvá cca " + time + " minut – čas na dvě kávy a kalibraci! ☕📐";
+      } else {
+        comment = "Tisk trvá cca " + time + " minut – připrav se na pořádnou tiskovou výzvu! 🏁🖨️";
+      }
+
+      const facts = [
+        "3D tisk vznikl už v roce 1983!",
+        "NASA používá 3D tiskárny přímo na ISS.",
+        "Lze vytisknout celé domy pomocí obřích tiskáren.",
+        "3D tisk se používá i v chirurgii pro náhrady kostí.",
+        "První auto s tištěnou karoserií vzniklo v roce 2014.",
+        "3D tisk šetří až 90 % materiálu oproti tradičním metodám.",
+        "Lze tisknout i z čokolády!",
+        "3D tisk pomáhá i v archeologii při rekonstrukci artefaktů.",
+        "Ve vesmíru se tiskne bez gravitace!",
+        "I běžné boty dnes mohou být kompletně 3D tištěné."
+      ];
+      const randomFact = facts[Math.floor(Math.random() * facts.length)];
+
+      document.getElementById("results").innerHTML = `
+        <strong>Odhad hmotnosti:</strong> ${weight.toFixed(1)} g<br>
+        <strong>Odhad ceny tisku:</strong> ${cost.toFixed(2)} Kč<br>
+        <strong>Odhadovaný čas tisku:</strong> ${time} minut<br>
+        <em>${comment}</em>
+        <div id="extraFact">💡 Zajímavost: ${randomFact}</div>
       `;
     }
 
-    initViewer();
+    function updateColors() {
+      const material = document.getElementById("material").value;
+      const color = document.getElementById("color");
+      let options = [];
+
+      if (material === "1.24") {
+        options = ["Bílá", "Černá", "Červená", "Modrá", "Zelená", "Šedá", "Žlutá", "Oranžová", "Růžová", "Mramorová", "Wood filament"];
+      } else if (material === "1.27" || material === "1.04") {
+        options = ["Bílá", "Černá"];
+      } else if (material === "1.20") {
+        options = ["Bílá", "Černá", "Modrá", "Zelená", "Žlutá", "Červená", "Oranžová"];
+      }
+
+      color.innerHTML = options.map(c => `<option value="${c.toLowerCase()}">${c}</option>`).join("");
+    }
+
+    window.onload = updateColors;
   </script>
 </body>
 </html>
