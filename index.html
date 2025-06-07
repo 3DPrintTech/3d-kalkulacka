@@ -10,61 +10,183 @@
       font-family: 'Orbitron', sans-serif;
       background: #000;
       color: #e0e0e0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
     }
     .wrapper {
-      width: 960px;
-      background-color: rgba(0, 0, 0, 0.8);
-      padding: 2rem;
+      max-width: 960px;
+      margin: 2rem auto;
+      background-color: rgba(0,0,0,0.8);
       border-radius: 20px;
       box-shadow: 0 0 30px rgba(0,255,231,0.3);
+      padding: 2rem;
     }
     header {
       text-align: center;
       font-size: 2.5rem;
-      margin-bottom: 1rem;
-      color: #00e0ff;
+      margin-bottom: 1.5rem;
     }
     #visual {
       width: 640px;
       height: 540px;
-      border: 2px solid #00e0ff;
+      margin: 0 auto 1rem auto;
       border-radius: 12px;
       background-size: cover;
       background-position: center;
-      margin: 0 auto 1rem auto;
+      background-image: url('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/Mlad%C3%A1%20v%C4%9Bdkyn%C4%9B%20v%203D%20tisk%C3%A1rn%C4%9B.png');
+      border: 2px solid #00e0ff;
     }
-    .button {
-      display: block;
-      margin: 1rem auto;
-      padding: 1rem 2rem;
+    button, select, input {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 1rem;
       font-size: 1rem;
-      font-weight: bold;
-      border: none;
+      font-family: inherit;
       border-radius: 10px;
+      border: none;
+      box-sizing: border-box;
+    }
+    button {
+      font-weight: bold;
       cursor: pointer;
       background: linear-gradient(90deg, #00ffe7, #ff00cc);
       color: black;
     }
+    .upload-btn {
+      background: linear-gradient(90deg, #00ffe7, #ff00cc);
+      color: black;
+      font-weight: bold;
+    }
+    .results {
+      background-color: #111;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-top: 1rem;
+    }
+    #extraFact {
+      margin-top: 0.5rem;
+      font-style: italic;
+      color: #ccc;
+    }
   </style>
+  <script>
+    UPLOADCARE_PUBLIC_KEY = '7369cc5508d1d25211e7';
+  </script>
+  <script src="https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"></script>
 </head>
 <body>
   <div class="wrapper">
     <header><span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">tech</span></header>
-    
-    <div id="visual" style="background-image: url('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/Mlad%C3%A1%20v%C4%9Bdkyn%C4%9B%20v%203D%20tisk%C3%A1rn%C4%9B.png');"></div>
-    
-    <button class="button" onclick="alert('📁 Nahrávání STL souboru zatím není aktivní.')">📁 Nahraj STL model</button>
-    
-    <button class="button" onclick="changeImage()">🚀 Spočítat</button>
+
+    <div id="visual"></div>
+
+    <button class="upload-btn" onclick="uploadFile()">📁 Vybrat STL model</button>
+    <input type="hidden" role="uploadcare-uploader" id="uploadcareInput" data-public-key="7369cc5508d1d25211e7" name="file" />
+
+    <label for="material">Materiál</label>
+    <select id="material" onchange="updateColors()">
+      <option value="1.24">PLA</option>
+      <option value="1.27">PETG</option>
+      <option value="1.04">ABS</option>
+      <option value="1.20">TPU</option>
+    </select>
+
+    <label for="color">Barva</label>
+    <select id="color"></select>
+
+    <label for="strength">Pevnost</label>
+    <select id="strength">
+      <option value="0.1">Nízká (dekorace)</option>
+      <option value="0.3">Střední (běžné použití)</option>
+      <option value="1.0">Vysoká (funkční model)</option>
+    </select>
+
+    <label for="complexity">Složitost modelu</label>
+    <select id="complexity">
+      <option value="1">Jednoduchý</option>
+      <option value="1.2">Střední</option>
+      <option value="1.5">Složitý</option>
+    </select>
+
+    <button onclick="calculate()">🚀 Spočítat</button>
+
+    <div class="results" id="results">
+      Zde se zobrazí odhad hmotnosti, ceny a času tisku...
+      <div id="extraFact"></div>
+    </div>
   </div>
 
   <script>
-    function changeImage() {
-      const visual = document.getElementById('visual');
-      visual.style.backgroundImage = "url('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/V%C4%9Bdkyn%C4%9B%20a%20holografick%C3%A1%20technologie.png')";
+    function uploadFile() {
+      uploadcare.openDialog(null, { publicKey: '7369cc5508d1d25211e7' }).done(function(file) {
+        file.done(function(info) {
+          document.getElementById('uploadcareInput').value = info.cdnUrl;
+        });
+      });
+    }
+
+    function updateColors() {
+      const material = document.getElementById("material").value;
+      const color = document.getElementById("color");
+      let options = [];
+
+      if (material === "1.24") {
+        options = ["Bílá", "Černá", "Červená", "Modrá", "Zelená", "Šedá", "Žlutá"];
+      } else if (material === "1.27" || material === "1.04") {
+        options = ["Černá", "Bílá"];
+      } else if (material === "1.20") {
+        options = ["Oranžová", "Zelená", "Modrá"];
+      }
+
+      color.innerHTML = options.map(c => `<option value="${c.toLowerCase()}">${c}</option>`).join("");
+    }
+
+    window.onload = updateColors;
+
+    function calculate() {
+      document.getElementById("visual").style.backgroundImage =
+        "url('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/V%C4%9Bdkyn%C4%9B%20a%20holografick%C3%A1%20technologie.png')";
+
+      const baseVolume = 30;
+      const materialDensity = parseFloat(document.getElementById('material').value);
+      const infill = parseFloat(document.getElementById('strength').value);
+      const complexity = parseFloat(document.getElementById('complexity').value);
+      const pricePerGram = 4.0;
+
+      const effectiveVolume = baseVolume * infill * complexity;
+      const weight = effectiveVolume * materialDensity;
+      const cost = weight * pricePerGram;
+      const time = Math.ceil(weight * 1.5 + 7);
+
+      let comment = "";
+      if (time <= 60) {
+        comment = "Tisk trvá cca " + time + " minut – ideální na pauzu 😄";
+      } else if (time <= 120) {
+        comment = "Tisk trvá cca " + time + " minut – čas na dvě kávy! ☕";
+      } else {
+        comment = "Tisk trvá cca " + time + " minut – připrav se na výzvu! 🏁";
+      }
+
+      const result = `
+        <strong>Hmotnost:</strong> ${weight.toFixed(1)} g<br>
+        <strong>Cena:</strong> ${cost.toFixed(2)} Kč<br>
+        <strong>Čas tisku:</strong> ${time} minut<br>
+        <em>${comment}</em>
+      `;
+      document.getElementById("results").innerHTML = result;
+
+      const facts = [
+        "3D tisk vznikl už v roce 1983!",
+        "NASA používá 3D tiskárny na ISS.",
+        "Tisknout lze i z čokolády 🍫!",
+        "3D tisk pomáhá i v chirurgii.",
+        "Lze vytisknout i dům 🏠!",
+        "Ve vesmíru se tiskne bez gravitace.",
+        "3D tištěné boty jsou realitou.",
+        "Tisk šetří až 90 % materiálu.",
+        "První 3D tištěné auto? Rok 2014.",
+        "3D tisk zachraňuje archeologii."
+      ];
+      const randomFact = facts[Math.floor(Math.random() * facts.length)];
+      document.getElementById("extraFact").innerText = "💡 Zajímavost: " + randomFact;
     }
   </script>
 </body>
