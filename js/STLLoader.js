@@ -1,0 +1,1 @@
+// STLLoader.js placeholder content
