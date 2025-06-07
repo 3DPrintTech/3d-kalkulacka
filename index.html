@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3DPrintTech – Vizualizace modelu</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: url('https://3dprinttech.github.io/3d-kalkulacka/laborator-bg.jpg.png') no-repeat center center fixed;
+      background-size: cover;
+    }
+    #upload {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: linear-gradient(90deg, #00ffe7, #ff00cc);
+      color: black;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <input type="file" id="upload" accept=".stl">
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/STLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/controls/OrbitControls.js"></script>
+  <script>
+    let scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x1a1a1a);
+    
+    let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    camera.position.z = 100;
+    
+    let renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    let controls = new THREE.OrbitControls(camera, renderer.domElement);
+    
+    let ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+    let directional = new THREE.DirectionalLight(0xffffff, 0.8);
+    directional.position.set(0, 1, 1).normalize();
+    scene.add(directional);
+    
+    let currentModel = null;
+    const material = new THREE.MeshPhongMaterial({ color: 0x00e0ff });
+    
+    document.getElementById('upload').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const contents = e.target.result;
+        const loader = new THREE.STLLoader();
+        const geometry = loader.parse(contents);
+
+        if (currentModel) scene.remove(currentModel);
+        currentModel = new THREE.Mesh(geometry, material);
+        geometry.computeBoundingBox();
+        const center = new THREE.Vector3();
+        geometry.boundingBox.getCenter(center);
+        currentModel.position.sub(center);
+        scene.add(currentModel);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
