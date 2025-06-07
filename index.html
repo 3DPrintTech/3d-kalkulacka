@@ -1,38 +1,43 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>3DPrintTech – Náhled STL</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D STL Viewer | 3DPrintTech</title>
   <style>
     body {
       margin: 0;
+      overflow: hidden;
       background: #111;
       font-family: 'Orbitron', sans-serif;
-      overflow: hidden;
     }
-    #colorPicker {
+    #upload, #colorPicker {
       position: absolute;
       top: 10px;
-      left: 10px;
-      z-index: 1;
+      z-index: 10;
+      padding: 0.5rem;
+      border-radius: 6px;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
     }
     #upload {
-      position: absolute;
-      top: 10px;
       left: 150px;
-      z-index: 1;
+      background: #00ffe7;
+    }
+    #colorPicker {
+      left: 10px;
     }
   </style>
 </head>
 <body>
-  <input type="color" id="colorPicker" value="#00e0ff" />
-  <input type="file" id="upload" accept=".stl" />
+  <input type="color" id="colorPicker" value="#00e0ff">
+  <input type="file" id="upload" accept=".stl">
 
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
-    import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js';
     import { STLLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/STLLoader.js';
+    import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js';
 
     let scene, camera, renderer, controls;
     let mesh, material;
@@ -53,23 +58,19 @@
 
       controls = new OrbitControls(camera, renderer.domElement);
 
-      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-      scene.add(ambientLight);
-
-      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-      directionalLight.position.set(0, 0, 1).normalize();
-      scene.add(directionalLight);
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(1, 1, 1).normalize();
+      scene.add(ambientLight, directionalLight);
 
       material = new THREE.MeshPhongMaterial({ color: 0x00e0ff });
 
-      document.getElementById('upload').addEventListener('change', function (event) {
+      document.getElementById("upload").addEventListener("change", function (event) {
         const file = event.target.files[0];
-        if (file) {
+        if (file && file.name.endsWith(".stl")) {
           const reader = new FileReader();
-          reader.onload = function (event) {
-            const contents = event.target.result;
-            const loader = new STLLoader();
-            const geometry = loader.parse(contents);
+          reader.onload = function (e) {
+            const geometry = new STLLoader().parse(e.target.result);
             if (mesh) scene.remove(mesh);
             mesh = new THREE.Mesh(geometry, material);
             geometry.computeBoundingBox();
@@ -82,12 +83,12 @@
         }
       });
 
-      document.getElementById('colorPicker').addEventListener('input', function (event) {
+      document.getElementById("colorPicker").addEventListener("input", function (event) {
         const color = event.target.value;
         material.color.set(color);
       });
 
-      window.addEventListener('resize', () => {
+      window.addEventListener("resize", () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
