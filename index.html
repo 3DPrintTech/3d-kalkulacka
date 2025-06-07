@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Kalkulačka | 3DPrintTech</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Arial', sans-serif;
+      background-color: #0b0c10;
+      color: #e0e0e0;
+    }
+    .wrapper {
+      max-width: 1000px;
+      margin: 2rem auto;
+      padding: 1rem;
+      background-color: #1f1f1f;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+    }
+    header {
+      text-align: center;
+      font-size: 2.2rem;
+      margin-bottom: 2rem;
+      color: #00e0ff;
+    }
+    .top-section {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .image-box {
+      width: 640px;
+      height: 540px;
+      background-color: #111;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .image-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .results-box {
+      flex: 1;
+      background-color: #0d0d0d;
+      padding: 1rem;
+      border-radius: 10px;
+    }
+    .bottom-section {
+      display: flex;
+      gap: 1rem;
+    }
+    .form-col {
+      flex: 1;
+    }
+    label {
+      display: block;
+      margin: 1rem 0 0.3rem;
+    }
+    select, input {
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: none;
+      background-color: #252525;
+      color: #00e0ff;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      width: 100%;
+      background-color: #00e0ff;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #000;
+    }
+    #uploadButton {
+      margin-top: 1.5rem;
+      background: linear-gradient(90deg, #00ffe7, #ff00cc);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header>3DPrint<span style="color:#ff0040">Tech</span> Kalkulačka</header>
+    <div class="top-section">
+      <div class="image-box">
+        <img id="modelImage" src="laborantka_otazniky.png" alt="vizuální model" />
+      </div>
+      <div class="results-box" id="results">
+        <p>Zde se zobrazí výsledek kalkulace...</p>
+        <div id="extraFact" style="margin-top:1rem; font-style:italic;"></div>
+      </div>
+    </div>
+    <div class="bottom-section">
+      <div class="form-col">
+        <label for="material">Materiál</label>
+        <select id="material">
+          <option value="1.24">PLA</option>
+          <option value="1.27">PETG</option>
+          <option value="1.04">ABS</option>
+          <option value="1.20">TPU</option>
+        </select>
+
+        <label for="strength">Pevnost</label>
+        <select id="strength">
+          <option value="0.1">Nízká</option>
+          <option value="0.3">Střední</option>
+          <option value="1.0">Vysoká</option>
+        </select>
+
+        <label for="complexity">Složitost</label>
+        <select id="complexity">
+          <option value="1">Jednoduchý</option>
+          <option value="1.2">Střední</option>
+          <option value="1.5">Složitý</option>
+        </select>
+
+        <button onclick="calculate()">🚀 Spočítat</button>
+        <button id="uploadButton">📁 Nahraj STL model</button>
+      </div>
+      <div class="form-col">
+        <label for="name">Jméno</label>
+        <input type="text" id="name" />
+
+        <label for="email">Email</label>
+        <input type="email" id="email" />
+
+        <button>📨 Odeslat poptávku</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function calculate() {
+      const material = parseFloat(document.getElementById('material').value);
+      const strength = parseFloat(document.getElementById('strength').value);
+      const complexity = parseFloat(document.getElementById('complexity').value);
+
+      const volume = 30;
+      const effectiveVolume = volume * strength * complexity;
+      const weight = effectiveVolume * material;
+      const cost = weight * 4;
+      const time = Math.ceil(weight * 1.5 + 7);
+
+      document.getElementById('results').innerHTML = `
+        <strong>Hmotnost:</strong> ${weight.toFixed(1)} g<br>
+        <strong>Cena:</strong> ${cost.toFixed(2)} Kč<br>
+        <strong>Čas tisku:</strong> ${time} min<br>
+      `;
+
+      const facts = [
+        "3D tisk vznikl v roce 1983.",
+        "NASA tiskne ve vesmíru.",
+        "3D tisk se používá ve stavebnictví.",
+        "Lze tisknout z čokolády!",
+        "3D tisk nahrazuje kosti.",
+      ];
+      const randomFact = facts[Math.floor(Math.random() * facts.length)];
+      document.getElementById("extraFact").innerText = "💡 Zajímavost: " + randomFact;
+
+      document.getElementById("modelImage").src = "laborantka_hologram.png";
+    }
+  </script>
+</body>
+</html>
