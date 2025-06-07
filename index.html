@@ -1,71 +1,51 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
   <title>3D Viewer | 3DPrintTech</title>
   <style>
     body {
       margin: 0;
+      background: #000;
       font-family: 'Orbitron', sans-serif;
-      background-color: #000;
-      color: #e0e0e0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .container {
-      width: 960px;
-      background: rgba(0, 0, 0, 0.85);
-      padding: 1.5rem;
-      border-radius: 20px;
-      box-shadow: 0 0 20px rgba(0,255,231,0.3);
     }
     .controls {
+      padding: 1rem;
       display: flex;
+      justify-content: center;
       gap: 1rem;
-      margin-bottom: 1rem;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 10;
     }
-    input[type="file"], input[type="color"] {
-      padding: 0.6rem 1rem;
-      font-weight: bold;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
+    canvas {
+      display: block;
     }
     #viewer {
-      width: 100%;
-      height: 500px;
-      border: 2px solid #00e0ff;
-      border-radius: 10px;
+      width: 100vw;
+      height: calc(100vh - 70px);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2><span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">tech</span> – Náhled STL modelu</h2>
-    <div class="controls">
-      <input type="file" id="upload" accept=".stl">
-      <input type="color" id="colorPicker" value="#00e0ff">
-    </div>
-    <div id="viewer"></div>
+  <div class="controls">
+    <input type="file" id="upload" accept=".stl">
+    <input type="color" id="colorPicker" value="#00e0ff">
   </div>
+  <div id="viewer"></div>
 
   <script type="module">
     import * as THREE from 'https://unpkg.com/three@0.150.1/build/three.module.js';
-    import { STLLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/STLLoader.js';
     import { OrbitControls } from 'https://unpkg.com/three@0.150.1/examples/jsm/controls/OrbitControls.js';
+    import { STLLoader } from 'https://unpkg.com/three@0.150.1/examples/jsm/loaders/STLLoader.js';
 
     let scene, camera, renderer, controls, mesh, material;
+
+    const container = document.getElementById('viewer');
 
     init();
     animate();
 
     function init() {
-      const container = document.getElementById('viewer');
-
-      // Setup
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0x111111);
 
@@ -88,7 +68,7 @@
 
       material = new THREE.MeshPhongMaterial({ color: 0x00e0ff });
 
-      document.getElementById("upload").addEventListener("change", function (event) {
+      document.getElementById("upload").addEventListener("change", (event) => {
         const file = event.target.files[0];
         if (file && file.name.endsWith(".stl")) {
           const reader = new FileReader();
@@ -106,9 +86,10 @@
         }
       });
 
-      document.getElementById("colorPicker").addEventListener("input", function (event) {
+      document.getElementById("colorPicker").addEventListener("input", (event) => {
+        const color = event.target.value;
         if (material) {
-          material.color.set(event.target.value);
+          material.color.set(color);
         }
       });
 
