@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="cs">
 <head>
@@ -8,122 +7,167 @@
   <style>
     body {
       margin: 0;
-      font-family: 'Arial', sans-serif;
-      background-color: #0b0c10;
+      font-family: 'Orbitron', sans-serif;
+      background: #000 url('https://3dprinttech.github.io/3d-kalkulacka/laborator-bg.jpg.png') no-repeat center center fixed;
+      background-size: cover;
       color: #e0e0e0;
     }
+
     .wrapper {
       max-width: 1000px;
       margin: 2rem auto;
-      padding: 1rem;
-      background-color: #1f1f1f;
-      border-radius: 15px;
-      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+      padding: 2rem;
+      background-color: rgba(0,0,0,0.85);
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0,255,231,0.3);
     }
+
     header {
       text-align: center;
-      font-size: 2.2rem;
+      font-size: 2.5rem;
+      background: linear-gradient(90deg, #ff0040, #00e0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
       margin-bottom: 2rem;
-      color: #00e0ff;
     }
-    .top-section {
+
+    .top {
       display: flex;
-      justify-content: space-between;
-      gap: 1rem;
+      gap: 2rem;
       margin-bottom: 2rem;
     }
-    .image-box {
+
+    .model-preview {
+      flex: 1;
       width: 640px;
       height: 540px;
-      background-color: #111;
-      border-radius: 10px;
-      overflow: hidden;
+      background-color: #1f1f1f;
+      background-image: url('https://3dprinttech.github.io/3d-kalkulacka/Mladá%20vědkyně%20v%203D%20tiskárně.png');
+      background-size: cover;
+      background-position: center;
+      border-radius: 12px;
     }
-    .image-box img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+
     .results-box {
       flex: 1;
-      background-color: #0d0d0d;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .results {
+      background-color: #111;
       padding: 1rem;
       border-radius: 10px;
+      margin-bottom: 1rem;
     }
-    .bottom-section {
+
+    #extraFact {
+      margin-top: 0.5rem;
+      font-style: italic;
+      font-size: 0.95rem;
+      color: #ccc;
+    }
+
+    .upload-btn {
+      padding: 1rem;
+      background: linear-gradient(90deg, #00ffe7, #ff00cc);
+      color: #000;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      width: 100%;
+      cursor: pointer;
+    }
+
+    form {
       display: flex;
-      gap: 1rem;
+      gap: 2rem;
     }
+
     .form-col {
       flex: 1;
     }
+
     label {
       display: block;
-      margin: 1rem 0 0.3rem;
+      margin-top: 1rem;
+      font-weight: 600;
     }
+
     select, input {
       width: 100%;
-      padding: 0.5rem;
-      border-radius: 6px;
-      border: none;
-      background-color: #252525;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border: 2px solid #00e0ff;
+      border-radius: 10px;
+      background-color: #121212;
       color: #00e0ff;
     }
-    button {
-      margin-top: 1rem;
-      padding: 0.8rem;
-      width: 100%;
-      background-color: #00e0ff;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      color: #000;
-    }
-    #uploadButton {
+
+    button.calc-btn, button.send-btn {
       margin-top: 1.5rem;
       background: linear-gradient(90deg, #00ffe7, #ff00cc);
+      border: none;
+      padding: 1rem;
+      border-radius: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      color: black;
+    }
+
+    [role="uploadcare-uploader"] {
+      display: none;
     }
   </style>
+  <script>
+    UPLOADCARE_PUBLIC_KEY = '7369cc5508d1d25211e7';
+  </script>
+  <script src="https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"></script>
 </head>
 <body>
   <div class="wrapper">
-    <header>3DPrint<span style="color:#ff0040">Tech</span> Kalkulačka</header>
-    <div class="top-section">
-      <div class="image-box">
-        <img id="modelImage" src="laborantka_otazniky.png" alt="vizuální model" />
-      </div>
-      <div class="results-box" id="results">
-        <p>Zde se zobrazí výsledek kalkulace...</p>
-        <div id="extraFact" style="margin-top:1rem; font-style:italic;"></div>
+    <header><span style="color:#ff0040">3DPrint</span><span style="color:#00e0ff">tech</span></header>
+    <div class="top">
+      <div class="model-preview" id="modelPreview"></div>
+      <div class="results-box">
+        <div class="results" id="results">
+          Zde se zobrazí odhad hmotnosti, ceny a času tisku...
+          <div id="extraFact"></div>
+        </div>
+        <button class="upload-btn" onclick="uploadFile()">📁 Nahraj STL model</button>
+        <input type="hidden" role="uploadcare-uploader" id="uploadcareInput" data-public-key="7369cc5508d1d25211e7" name="file" />
       </div>
     </div>
-    <div class="bottom-section">
+    <form>
       <div class="form-col">
-        <label for="material">Materiál</label>
-        <select id="material">
+        <label for="material">Zvol materiál</label>
+        <select id="material" onchange="updateColors()">
           <option value="1.24">PLA</option>
           <option value="1.27">PETG</option>
           <option value="1.04">ABS</option>
           <option value="1.20">TPU</option>
         </select>
 
+        <label for="color">Vyber barvu</label>
+        <select id="color"></select>
+
         <label for="strength">Pevnost</label>
         <select id="strength">
-          <option value="0.1">Nízká</option>
-          <option value="0.3">Střední</option>
-          <option value="1.0">Vysoká</option>
+          <option value="0.1">Nízká (dekorace)</option>
+          <option value="0.3">Střední (běžné použití)</option>
+          <option value="1.0">Vysoká (funkční model)</option>
         </select>
 
-        <label for="complexity">Složitost</label>
+        <label for="complexity">Složitost modelu</label>
         <select id="complexity">
-          <option value="1">Jednoduchý</option>
-          <option value="1.2">Střední</option>
-          <option value="1.5">Složitý</option>
+          <option value="1">Jednoduchý (např. vizitka, klíčenka, držák)</option>
+          <option value="1.2">Středně složitý (např. kryty, díly, obaly)</option>
+          <option value="1.5">Složitý (např. socha, figurka, dekorace s převisy)</option>
         </select>
 
-        <button onclick="calculate()">🚀 Spočítat</button>
-        <button id="uploadButton">📁 Nahraj STL model</button>
+        <button type="button" class="calc-btn" onclick="calculate()">🚀 Spočítat</button>
       </div>
       <div class="form-col">
         <label for="name">Jméno</label>
@@ -132,41 +176,86 @@
         <label for="email">Email</label>
         <input type="email" id="email" />
 
-        <button>📨 Odeslat poptávku</button>
+        <button type="submit" class="send-btn">📨 Odeslat poptávku</button>
       </div>
-    </div>
+    </form>
   </div>
 
   <script>
-    function calculate() {
-      const material = parseFloat(document.getElementById('material').value);
-      const strength = parseFloat(document.getElementById('strength').value);
-      const complexity = parseFloat(document.getElementById('complexity').value);
+    function uploadFile() {
+      uploadcare.openDialog(null, { publicKey: '7369cc5508d1d25211e7' }).done(function(file) {
+        document.getElementById('modelPreview').innerText = "📁 STL soubor přijat ✔️";
+        file.done(function(info) {
+          document.getElementById('uploadcareInput').value = info.cdnUrl;
+        });
+      });
+    }
 
-      const volume = 30;
-      const effectiveVolume = volume * strength * complexity;
-      const weight = effectiveVolume * material;
-      const cost = weight * 4;
+    function calculate() {
+      const baseVolume = 30;
+      const materialDensity = parseFloat(document.getElementById('material').value);
+      const infill = parseFloat(document.getElementById('strength').value);
+      const complexity = parseFloat(document.getElementById('complexity').value);
+      const pricePerGram = 4.0;
+
+      const effectiveVolume = baseVolume * infill * complexity;
+      const weight = effectiveVolume * materialDensity;
+      const cost = weight * pricePerGram;
       const time = Math.ceil(weight * 1.5 + 7);
 
-      document.getElementById('results').innerHTML = `
-        <strong>Hmotnost:</strong> ${weight.toFixed(1)} g<br>
-        <strong>Cena:</strong> ${cost.toFixed(2)} Kč<br>
-        <strong>Čas tisku:</strong> ${time} min<br>
+      let comment = "";
+      if (time <= 60) {
+        comment = "Tisk trvá cca " + time + " minut – ve frontě je i sousedův držák na sprchu 😄";
+      } else if (time <= 120) {
+        comment = "Tisk trvá cca " + time + " minut – čas na dvě kávy a kalibraci! ☕📐";
+      } else {
+        comment = "Tisk trvá cca " + time + " minut – připrav se na pořádnou tiskovou výzvu! 🏁🖨️";
+      }
+
+      const result = `
+        <strong>Odhad hmotnosti:</strong> ${weight.toFixed(1)} g<br>
+        <strong>Odhad ceny tisku:</strong> ${cost.toFixed(2)} Kč<br>
+        <strong>Odhadovaný čas tisku:</strong> ${time} minut<br>
+        <em>${comment}</em>
       `;
+      document.getElementById('results').innerHTML = result;
 
       const facts = [
-        "3D tisk vznikl v roce 1983.",
-        "NASA tiskne ve vesmíru.",
-        "3D tisk se používá ve stavebnictví.",
-        "Lze tisknout z čokolády!",
-        "3D tisk nahrazuje kosti.",
+        "3D tisk vznikl už v roce 1983!",
+        "NASA používá 3D tiskárny přímo na ISS.",
+        "Lze vytisknout celé domy pomocí obřích tiskáren.",
+        "3D tisk se používá i v chirurgii pro náhrady kostí.",
+        "První auto s tištěnou karoserií vzniklo v roce 2014.",
+        "3D tisk šetří až 90 % materiálu oproti tradičním metodám.",
+        "Lze tisknout i z čokolády!",
+        "3D tisk pomáhá i v archeologii při rekonstrukci artefaktů.",
+        "Ve vesmíru se tiskne bez gravitace!",
+        "I běžné boty dnes mohou být kompletně 3D tištěné."
       ];
       const randomFact = facts[Math.floor(Math.random() * facts.length)];
       document.getElementById("extraFact").innerText = "💡 Zajímavost: " + randomFact;
 
-      document.getElementById("modelImage").src = "laborantka_hologram.png";
+      // Změna obrázku
+      document.getElementById('modelPreview').style.backgroundImage = "url('https://3dprinttech.github.io/3d-kalkulacka/Vědkyně%20a%20holografická%20technologie.png')";
     }
+
+    function updateColors() {
+      const material = document.getElementById("material").value;
+      const color = document.getElementById("color");
+      let options = [];
+
+      if (material === "1.24") {
+        options = ["Bílá", "Černá", "Červená", "Modrá", "Zelená", "Šedá", "Žlutá", "Oranžová", "Růžová", "Mramorová", "Wood filament"];
+      } else if (material === "1.27" || material === "1.04") {
+        options = ["Bílá", "Černá"];
+      } else if (material === "1.20") {
+        options = ["Bílá", "Černá", "Modrá", "Zelená", "Žlutá", "Červená", "Oranžová"];
+      }
+
+      color.innerHTML = options.map(c => `<option value="${c.toLowerCase()}">${c}</option>`).join("");
+    }
+
+    window.onload = updateColors;
   </script>
 </body>
 </html>
