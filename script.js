@@ -1,1 +1,0 @@
-document.getElementById('results').innerText = 'Zde budou výsledky';
