@@ -186,7 +186,6 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/loaders/STLLoader.js"></script>
 
   <script>
-    // Barvy podle materiálu
     document.addEventListener("DOMContentLoaded", function () {
       const barvyDleMaterialu = {
         PLA: [
@@ -226,7 +225,6 @@
       updateBarvy();
     });
 
-    // Three.js 3D model loader
     const scene = new THREE.Scene();
     const container = document.getElementById("viewer");
     const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -303,7 +301,6 @@
       reader.readAsArrayBuffer(e.target.files[0]);
     });
 
-    // Výpočet tisku
     document.getElementById("calculate-btn").addEventListener("click", function () {
       const hustoty = {
         PLA: 1.24,
@@ -317,11 +314,11 @@
         "Vysoká (funkční a strojní)": 1.0,
       };
       const vtipneVety = [
-        "tisk sice trvá, ale soused ti mezitím tiskne držák na kytaru.",
-        "tisk sice trvá, ale robot v kuchyni už připravuje kafe.",
-        "tisk sice trvá, ale kočka už obsadila nejlepší místo na gauči.",
-        "tisk sice trvá, ale tvůj model už je hvězdou na Instagramu.",
-        "tisk sice trvá, ale v garáži už čeká hotové auto na dálkové ovládání.",
+        "sousedovi držák na kytaru.",
+        "robot v kuchyni už připravuje kafe.",
+        "kočka už obsadila nejlepší místo na gauči.",
+        "tvůj model už je hvězdou na Instagramu.",
+        "v garáži už čeká hotové auto na dálkové ovládání.",
       ];
 
       const vypocetCasEl = document.getElementById("vypocet-cas");
@@ -343,15 +340,11 @@
       const casTisku = hmotnostG / rychlostTisku;
       const celkovyCas = 7 + casTisku;
 
-      const veta = vtipneVety[Math.floor(Math.random() * vtipneVety.length)];
-
-      vypocetCasEl.textContent = `Odhadovaný čas tisku: ${celkovyCas.toFixed(
-        1
-      )} minut (tryska 0.4mm, výška vrstvy 0.2mm)`;
+      vypocetCasEl.textContent = `Odhadovaný čas tisku: ${celkovyCas.toFixed(1)} minut`;
       vypocetCenaEl.textContent = `Odhadovaná cena tisku: ${cena.toFixed(2)} Kč`;
-      vtipnaVetaEl.textContent = `Tisk sice trvá ${celkovyCas.toFixed(
-        1
-      )} minut, ale před tebou se tiskne ${veta}`;
+
+      const veta = vtipneVety[Math.floor(Math.random() * vtipneVety.length)];
+      vtipnaVetaEl.textContent = `Tisk sice trvá ${celkovyCas.toFixed(1)} minut, ale před tebou se tiskne ${veta}`;
     });
   </script>
 </body>
