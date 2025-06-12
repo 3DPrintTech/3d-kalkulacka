@@ -19,7 +19,8 @@
         .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
         #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; box-sizing: border-box; position: relative; }
         .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
-        .result-text { position: relative; z-index: 2; text-shadow: 1px 1px 2px #000, 0 0 8px rgba(0,0,0,0.9); }
+        /* NOVÝ, SILNĚJŠÍ STÍN TEXTU */
+        .result-text { position: relative; z-index: 2; text-shadow: 0 0 4px black, 0 0 12px black; }
         .controls-bottom { display: flex; gap: 20px; justify-content: center; }
         .bottom-left, .bottom-right { width: 360px; display: flex; flex-direction: column; gap: 10px; flex: none; }
         .upload-label, #calculate-btn { padding: 10px; border: none; border-radius: 6px; background: linear-gradient(to right, #0ff, #f0f); color: black; font-weight: bold; text-align: center; cursor: pointer; margin: 0; width: 100%; box-sizing: border-box; }
@@ -128,9 +129,15 @@
         controls.target.set(0, 0, 0);
         controls.enableDamping = true;
         
+        // --- NOVÁ LOGIKA PRO MATERIÁLY A TEXTURY ---
         const textureLoader = new THREE.TextureLoader();
-        const marbleTexture = textureLoader.load('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/marble_texture.jpg');
-        marbleTexture.wrapS = marbleTexture.wrapT = THREE.RepeatWrapping;
+        // Načteme MatCap texturu, která nepotřebuje UV souřadnice
+        const marbleMatcapTexture = textureLoader.load('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/marble_matcap.jpg');
+        
+        // Vytvoříme si oba materiály předem
+        const standardMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
+        const matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: marbleMatcapTexture });
+        // --- KONEC NOVÉ LOGIKY ---
 
         function animate() {
             requestAnimationFrame(animate);
@@ -215,8 +222,9 @@
                     totalModelVolume = Math.abs(currentModelVolume / 6.0) / 1000;
 
                     if (mesh) scene.remove(mesh);
-                    const material = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
-                    mesh = new THREE.Mesh(geometry, material);
+                    
+                    // Při vytvoření meshe použijeme náš standardní materiál
+                    mesh = new THREE.Mesh(geometry, standardMaterial);
                     
                     geometry.center();
                     const boundingBox = new THREE.Box3().setFromObject(mesh);
@@ -250,24 +258,19 @@
         
         function refreshColors() { colorSelect.innerHTML = ''; (materialColors[materialSelect.value] || []).forEach(color => { const opt = document.createElement('option'); opt.value = color; opt.textContent = color; colorSelect.appendChild(opt); }); if (mesh) updateColor(); }
         
-        // --- VYLEPŠENÁ FUNKCE PRO BARVU A TEXTURU ---
+        // NOVÁ FUNKCE, KTERÁ PŘEPÍNÁ MEZI MATERIÁLY
         function updateColor() {
             if (!mesh) return;
             const selectedColorName = colorSelect.value;
             
-            // Základní vlastnosti pro všechny barvy
-            mesh.material.transparent = false;
-            mesh.material.roughness = 1.0;
-
             if (selectedColorName === 'Mramor') {
-                mesh.material.map = marbleTexture;
-                mesh.material.color.set(0x999999); // Tmavší šedý podklad pro kontrast
-                mesh.material.roughness = 0.7; // Mírně hladší pro lepší zobrazení textury
+                // Pokud je vybrán mramor, použijeme Matcap materiál
+                mesh.material = matcapMaterial;
             } else {
-                mesh.material.map = null; // Odebereme texturu pro ostatní barvy
-                mesh.material.color.setHex(colorMap[selectedColorName] || 0x888888);
+                // Pro všechny ostatní barvy použijeme standardní materiál
+                mesh.material = standardMaterial;
+                standardMaterial.color.setHex(colorMap[selectedColorName] || 0x888888);
             }
-            mesh.material.needsUpdate = true;
         }
         
         materialSelect.addEventListener('change', refreshColors);
