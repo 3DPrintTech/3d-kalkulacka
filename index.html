@@ -1,527 +1,319 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Kalkulačka</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/loaders/STLLoader.js"></script>
-  <style>
-    body {
-  margin: 0;
-  font-family: sans-serif;
-  background: url('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/laborator-bg.jpg.png') center center / cover no-repeat fixed;
-  color: white;
-  justify-content: center;
-  padding: 30px 0;
-  width: 100vw;
-  min-height: 100vh;
-}
-.kalkulacka {
-  width: 760px;
-  background: rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.layout-top {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-}
-.left-pane, .right-pane {
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.viewer-container, #result-container, .upload-label, #calculate-btn, #file-name {
-  width: 100%;
-  box-sizing: border-box;
-}
-.viewer-container {
-  height: 320px;
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
-  background: #888;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.viewer-bg-img {
-  position: absolute;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  z-index: 1;
-  pointer-events: none;
-  transition: filter 0.4s;
-}
-.viewer-bg-gray {
-  filter: grayscale(1) brightness(0.7) blur(0.7px);
-  opacity: 0.63;
-  transition: filter 0.4s, opacity 0.4s;
-}
-.viewer-canvas {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  height: 100%;
-  background: transparent;
-}
-#result-container {
-  height: 320px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #222;
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
-  box-sizing: border-box;
-  position: relative;
-}
-.result-bg-img {
-  position: absolute;
-  left: 0; top: 0;
-  width: 100%; height: 100%;
-  object-fit: cover;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 1;
-}
-.result-text {
-  position: relative;
-  z-index: 2;
-  text-shadow: 0 3px 12px #000, 0 1.5px 0 #000;
-}
-.controls-bottom {
-  display: flex;
-  gap: 20px;
-  justify-content: center;
-}
-.bottom-left, .bottom-right {
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: none;
-}
-.upload-label, #calculate-btn {
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  background: linear-gradient(to right, #0ff, #f0f);
-  color: black;
-  font-weight: bold;
-  text-align: center;
-  cursor: pointer;
-  margin: 0;
-  width: 100%;
-  box-sizing: border-box;
-}
-input[type=file] {
-  display: none;
-}
-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(to right, #0ff, #f0f);
-  border-radius: 6px;
-  padding: 6px 10px;
-  color: black;
-  font-weight: bold;
-  width: 100%;
-  box-sizing: border-box;
-  height: 36px;
-}
-select {
-  margin-left: 10px;
-  flex-grow: 1;
-  background: linear-gradient(to right, #ffffff, #eeeeee);
-  color: black;
-  border: none;
-  border-radius: 4px;
-  padding: 4px;
-  font-weight: bold;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='0,0 10,0 5,7' fill='%23000'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 10px 10px;
-  cursor: pointer;
-  height: 100%;
-}
-label select {
-  width: 140px;
-  min-width: 100px;
-  max-width: 180px;
-  margin-left: auto;
-  text-align: center;
-  text-align-last: center;
-}
-.poptavka-box {
-  width: 760px;
-  margin: 30px auto 0 auto;
-  background: rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: 12px;
-  box-shadow: 0 0 16px rgba(0,0,0,0.13);
-  padding: 20px 20px 16px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: white;
-}
-.poptavka-box form {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.poptavka-box input[type="text"], .poptavka-box input[type="email"] {
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: none;
-  background: linear-gradient(to right, #fff, #f0f0f0);
-  color: #222;
-  font-size: 16px;
-  font-weight: 600;
-  box-sizing: border-box;
-}
-.poptavka-box .send-btn {
-  padding: 10px;
-  border: none;
-  border-radius: 6px;
-  background: linear-gradient(to right, #0ff, #f0f);
-  color: black;
-  font-weight: bold;
-  font-size: 16px;
-  text-align: center;
-  cursor: pointer;
-  margin-top: 6px;
-  box-sizing: border-box;
-  transition: background 0.2s;
-}
-.poptavka-box .send-btn:hover {
-  background: linear-gradient(to right, #7af6ff, #f89fff);
-}
-.center-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100vw;
-}
-
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Kalkulačka</title>
+    <script src="https://ucarecdn.com/libs/widget/3.x/uploadcare.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.146.0/examples/js/loaders/STLLoader.js"></script>
+    <style>
+        body { margin: 0; font-family: sans-serif; background: url('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/laborator-bg.jpg.png') center center / cover no-repeat fixed; color: white; justify-content: center; padding: 30px 0; width: 100vw; min-height: 100vh; }
+        .kalkulacka { width: 760px; background: rgba(0, 0, 0, 0.25); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); padding: 20px; border-radius: 12px; box-shadow: 0 0 20px rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 20px; }
+        .layout-top { display: flex; gap: 20px; justify-content: center; }
+        .left-pane, .right-pane { width: 360px; display: flex; flex-direction: column; gap: 10px; }
+        .viewer-container { height: 320px; border-radius: 8px; overflow: hidden; position: relative; background: #888; display: flex; align-items: center; justify-content: center; }
+        .viewer-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; transition: filter 0.4s; }
+        .viewer-bg-gray { filter: grayscale(1) brightness(0.7) blur(0.7px); opacity: 0.63; transition: filter 0.4s, opacity 0.4s; }
+        .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
+        #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; box-sizing: border-box; position: relative; }
+        .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
+        .result-text { position: relative; z-index: 2; text-shadow: 0 3px 12px #000, 0 1.5px 0 #000; }
+        .controls-bottom { display: flex; gap: 20px; justify-content: center; }
+        .bottom-left, .bottom-right { width: 360px; display: flex; flex-direction: column; gap: 10px; flex: none; }
+        .upload-label, #calculate-btn { padding: 10px; border: none; border-radius: 6px; background: linear-gradient(to right, #0ff, #f0f); color: black; font-weight: bold; text-align: center; cursor: pointer; margin: 0; width: 100%; box-sizing: border-box; }
+        input[type=file] { display: none; }
+        label { display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to right, #0ff, #f0f); border-radius: 6px; padding: 6px 10px; color: black; font-weight: bold; width: 100%; box-sizing: border-box; height: 36px; }
+        select { margin-left: 10px; flex-grow: 1; background: linear-gradient(to right, #ffffff, #eeeeee); color: black; border: none; border-radius: 4px; padding: 4px; font-weight: bold; appearance: none; background-image: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='0,0 10,0 5,7' fill='%23000'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 10px; cursor: pointer; height: 100%; }
+        label select { width: 140px; min-width: 100px; max-width: 180px; margin-left: auto; text-align: center; text-align-last: center; }
+        .poptavka-box { width: 760px; margin: 30px auto 0 auto; background: rgba(0, 0, 0, 0.28); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 12px; box-shadow: 0 0 16px rgba(0,0,0,0.13); padding: 20px 20px 16px 20px; display: flex; flex-direction: column; align-items: center; color: white; }
+        .poptavka-box form { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+        .poptavka-box input[type="text"], .poptavka-box input[type="email"] { width: 100%; padding: 8px 12px; border-radius: 6px; border: none; background: linear-gradient(to right, #fff, #f0f0f0); color: #222; font-size: 16px; font-weight: 600; box-sizing: border-box; }
+        .poptavka-box .send-btn { padding: 10px; border: none; border-radius: 6px; background: linear-gradient(to right, #0ff, #f0f); color: black; font-weight: bold; font-size: 16px; text-align: center; cursor: pointer; margin-top: 6px; box-sizing: border-box; transition: background 0.2s; }
+        .poptavka-box .send-btn:hover { background: linear-gradient(to right, #7af6ff, #f89fff); }
+        .center-wrap { display: flex; flex-direction: column; align-items: center; width: 100vw; }
+        #file-name { font-size:14px; min-height: 20px; }
+        #file-name.error-message { color: #ff8a8a; font-weight: bold; }
+        .uploadcare--widget__button { display: none !important; }
+    </style>
 </head>
 <body>
-<div class="center-wrap">
-
-  <div class="kalkulacka">
-    <div class="layout-top">
-      <div class="left-pane">
-        <div id="viewer" class="viewer-container">
-          <!-- Laborantka s hologramem jako pozadí -->
-          <img id="viewer-bg-img" class="viewer-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/V%C4%9Bdkyn%C4%9B%20a%20holografick%C3%A1%20technologie.png" alt="laborantka hologram">
+    <div class="center-wrap">
+        <div class="kalkulacka">
+            <div class="layout-top">
+                <div class="left-pane">
+                    <div id="viewer" class="viewer-container">
+                        <img id="viewer-bg-img" class="viewer-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/V%C4%9Bdkyn%C4%9B%20a%20holografick%C3%A1%20technologie.png" alt="laborantka hologram">
+                    </div>
+                    <label class="upload-label" for="ucare">Vybrat STL</label>
+                    <input type="hidden" role="uploadcare-uploader" data-public-key="7369cc5508d1d25211e7" data-images-only="false" data-tabs="file url" data-clearable="true" id="ucare" name="ucare" accept=".stl" />
+                    <span id="file-name"></span>
+                </div>
+                <div class="right-pane">
+                    <div id="result-container">
+                        <img class="result-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/laborantka%20s%20otazniky.png" alt="laborantka s otazníky">
+                        <div class="result-text">
+                            <h3>Výsledek výpočtu</h3>
+                            <p id="vypocet-objem">-</p>
+                            <p id="vypocet-podpory" style="display:none;"></p>
+                            <p id="vypocet-hmotnost-celkem" style="display:none; font-weight: bold;"></p>
+                            <p id="vypocet-cena">-</p>
+                            <p id="vypocet-cas">-</p>
+                            <p id="vtipna-veta">-</p>
+                        </div>
+                    </div>
+                    <button id="calculate-btn">Výpočet tisku</button>
+                </div>
+            </div>
+            <div class="controls-bottom">
+                <div class="bottom-left">
+                    <label>Materiál<select id="material"></select></label>
+                    <label>Barva<select id="barva"></select></label>
+                </div>
+                <div class="bottom-right">
+                    <label>Pevnost<select id="pevnost">
+                        <option value="0.1">Nízká (dekorace)</option>
+                        <option value="0.3">Střední (držáky, vizitky)</option>
+                        <option value="1.0">Vysoká (funkční díly)</option>
+                    </select></label>
+                    <label>Počet kusů<select id="pocet-kusu"></select></label>
+                </div>
+            </div>
         </div>
-        <label class="upload-label" for="stlInput">Vybrat STL
-  <input type="file" id="stlInput" name="stlfile" accept=".stl">
-</label>
-<span id="file-name" style="font-size:14px;"></span>
-      </div>
-      <div class="right-pane">
-        <div id="result-container">
-          <!-- Laborantka s otazníky jako background -->
-          <img class="result-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/laborantka%20s%20otazniky.png" alt="laborantka s otazníky">
-          <div class="result-text">
-            <h3>Výsledek výpočtu</h3>
-            <p id="vypocet-objem">-</p>
-            <p id="vypocet-cena">-</p>
-            <p id="vypocet-cas">-</p>
-            <p id="vtipna-veta">-</p>
-          </div>
+        <div class="poptavka-box">
+            <form id="poptavka-form" action="https://formspree.io/f/mgvyawwz" method="POST" enctype="multipart/form-data">
+                <h3 style="margin-bottom:8px;">Poptávka tisku</h3>
+                <input type="text" name="jmeno" placeholder="Vaše jméno" required>
+                <input type="email" name="email" id="email-input" placeholder="Váš e-mail" required>
+                <textarea name="rekapitulace" id="rekapitulace" style="display:none;"></textarea>
+                <input type="hidden" name="_next" value="./dekuji.html">
+                <button type="submit" class="send-btn">Odeslat poptávku</button>
+            </form>
         </div>
-        <button id="calculate-btn">Výpočet tisku</button>
-      </div>
     </div>
-    <div class="controls-bottom">
-      <div class="bottom-left">
-        <label>Materiál<select id="material"></select></label>
-        <label>Barva<select id="barva"></select></label>
-      </div>
-      <div class="bottom-right">
-        <label>Pevnost<select id="pevnost">
-          <option value="0.1">Nízká (dekorace)</option>
-          <option value="0.3">Střední (držáky, vizitky)</option>
-          <option value="1.0">Vysoká (funkční díly)</option>
-        </select></label>
-        <label>Počet kusů<select id="pocet-kusu"></select></label>
-      </div>
-    </div>
-  </div><!-- konec kalkulačky -->
 
-<!-- Poptávkový box pod kalkulačkou -->
-<div class="poptavka-box">
-  <form id="poptavka-form" action="https://formspree.io/f/mgvyawwz" method="POST" enctype="multipart/form-data">
-    <h3 style="margin-bottom:8px;">Poptávka tisku</h3>
-    <input type="text" name="jmeno" placeholder="Vaše jméno" required>
-    <input type="email" name="email" placeholder="Váš e-mail" required>
-    <!-- skryté pole pro rekapitulaci výpočtu -->
-    <textarea name="rekapitulace" id="rekapitulace" style="display:none;"></textarea>
-    <!-- skrytý input pro STL, naplní se automaticky JS -->
-    <button type="submit" class="send-btn">Odeslat poptávku</button>
-  </form>
-</div>
-</div> <!-- konec center-wrap -->
+    <script>
+        let mesh = null;
+        let modelVolume = 0;
+        let supportVolume = 0;
+        let uploadedFileUrl = null;
+        let uploadedFileName = '';
+        const fileNameElement = document.getElementById('file-name');
+        const scene = new THREE.Scene();
+        let axes = null;
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const viewer = document.getElementById('viewer');
+        renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+        renderer.setClearColor(0x000000, 0);
+        renderer.domElement.className = 'viewer-canvas';
+        viewer.appendChild(renderer.domElement);
+        
+        const camera = new THREE.PerspectiveCamera(45, viewer.clientWidth / viewer.clientHeight, 0.1, 1000);
+        camera.position.set(0, -180, 80);
+        camera.up.set(0, 0, 1);
+        camera.lookAt(0, 0, 0);
+        
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        keyLight.position.set(1, 1, 1);
+        camera.add(keyLight);
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+        fillLight.position.set(-1, 0.5, 0.5);
+        camera.add(fillLight);
+        scene.add(camera);
 
-<script>
-let mesh = null;
-let volume = 0;
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 0, 0);
+        controls.enableDamping = true;
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+        
+        function calculateSupportVolume(geometry, overhangAngleDegrees = 45, supportDensity = 0.10) {
+            const positions = geometry.attributes.position;
+            const downVector = new THREE.Vector3(0, 0, -1);
+            const angleThreshold = Math.cos((90 - overhangAngleDegrees) * Math.PI / 180);
 
-const colorMap = {
-  'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff,
-  'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22,
-  'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600,
-  'Růžová': 0xFF69B4, 'Mramor': 0x777777, 'WOOD filament': 0x654321
-};
-const materialColors = {
-  PLA: ['Černá','Šedá','Bílá','Fialová','Modrá','Zelená','Červená','Růžová','Oranžová','Žlutá','Mramor','WOOD filament'],
-  PETG: ['Černá','Bílá'],
-  ABS: ['Černá','Bílá'],
-  TPU: ['Černá','Bílá','Modrá','Zelená','Červená','Oranžová','Žlutá']
-};
+            let totalSupportProjectedArea = 0;
+            let totalSupportHeight = 0;
+            let supportTriangleCount = 0;
 
-const materialSelect = document.getElementById('material');
-const colorSelect = document.getElementById('barva');
-const countSelect = document.getElementById('pocet-kusu');
+            const vA = new THREE.Vector3();
+            const vB = new THREE.Vector3();
+            const vC = new THREE.Vector3();
+            const normal = new THREE.Vector3();
 
-for (let i = 1; i <= 20; i++) {
-  const opt = document.createElement('option');
-  opt.value = i;
-  opt.textContent = i;
-  countSelect.appendChild(opt);
-}
-['PLA','PETG','ABS','TPU'].forEach(mat => {
-  const opt = document.createElement('option');
-  opt.value = mat;
-  opt.textContent = mat;
-  materialSelect.appendChild(opt);
-});
+            for (let i = 0; i < positions.count; i += 3) {
+                vA.fromBufferAttribute(positions, i);
+                vB.fromBufferAttribute(positions, i + 1);
+                vC.fromBufferAttribute(positions, i + 2);
 
-function refreshColors() {
-  colorSelect.innerHTML = '';
-  (materialColors[materialSelect.value] || []).forEach(color => {
-    const opt = document.createElement('option');
-    opt.value = color;
-    opt.textContent = color;
-    colorSelect.appendChild(opt);
-  });
-  if (mesh) updateColor();
-}
+                const faceNormal = normal.crossVectors(vB.clone().sub(vA), vC.clone().sub(vA)).normalize();
+                
+                if (faceNormal.dot(downVector) > angleThreshold) {
+                    const projectedArea = Math.abs(0.5 * (vA.x * (vB.y - vC.y) + vB.x * (vC.y - vA.y) + vC.x * (vA.y - vB.y)));
+                    totalSupportProjectedArea += projectedArea;
+                    const avgHeight = (vA.z + vB.z + vC.z) / 3;
+                    totalSupportHeight += avgHeight;
+                    supportTriangleCount++;
+                }
+            }
+            
+            if (supportTriangleCount === 0) {
+                return 0;
+            }
 
-function updateColor() {
-  if (mesh && mesh.material && colorSelect.value) {
-    mesh.material.color.setHex(colorMap[colorSelect.value] || 0x888888);
-    mesh.material.needsUpdate = true;
-  }
-}
+            const averageOverhangHeight = totalSupportHeight / supportTriangleCount;
+            const estimatedFullVolume = totalSupportProjectedArea * averageOverhangHeight;
+            const estimatedRealVolume = estimatedFullVolume * supportDensity;
 
-materialSelect.addEventListener('change', refreshColors);
-colorSelect.addEventListener('change', updateColor);
-materialSelect.value = 'PLA';
-refreshColors();
-</script>
+            return estimatedRealVolume / 1000;
+        }
 
-<script>
-// THREE.js renderer setup
-const scene = new THREE.Scene();
-let axes = null; // osy budou přidávány jen když je model
-scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-const light = new THREE.DirectionalLight(0xffffff, 2);
-light.position.set(50, 100, 100);
-scene.add(light);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-const viewer = document.getElementById('viewer');
-renderer.setSize(viewer.clientWidth, viewer.clientHeight);
-renderer.setClearColor(0x000000, 0); // průhledné pozadí
-renderer.domElement.className = 'viewer-canvas';
-viewer.appendChild(renderer.domElement);
+        const ucareWidget = uploadcare.Widget('#ucare');
+        ucareWidget.onUploadComplete(function(info) {
+            fileNameElement.classList.remove('error-message');
+            uploadedFileUrl = info.cdnUrl;
+            uploadedFileName = info.name || 'STL model';
+            fileNameElement.textContent = info.name ? info.name + ' (nahráno)' : 'Soubor nahrán';
+            document.getElementById('viewer-bg-img').classList.add('viewer-bg-gray');
+            fetch(uploadedFileUrl)
+                .then(r => r.arrayBuffer())
+                .then(buffer => {
+                    const loader = new THREE.STLLoader();
+                    const geometry = loader.parse(buffer);
+                    geometry.computeBoundingBox();
+                    
+                    let currentModelVolume = 0;
+                    const positions = geometry.attributes.position.array;
+                    for (let i = 0; i < positions.length; i += 9) {
+                        const ax = positions[i], ay = positions[i + 1], az = positions[i + 2];
+                        const bx = positions[i + 3], by = positions[i + 4], bz = positions[i + 5];
+                        const cx = positions[i + 6], cy = positions[i + 7], cz = positions[i + 8];
+                        currentModelVolume += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx));
+                    }
+                    modelVolume = Math.abs(currentModelVolume / 6.0) / 1000;
 
-const camera = new THREE.PerspectiveCamera(45, viewer.clientWidth / viewer.clientHeight, 0.1, 1000);
-camera.position.set(0, 150, 0);
-camera.up.set(0, 0, 1);
-camera.lookAt(0, 0, 0);
+                    if (mesh) scene.remove(mesh);
+                    const material = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    
+                    geometry.center();
+                    const boundingBox = new THREE.Box3().setFromObject(mesh);
+                    const height = boundingBox.max.z - boundingBox.min.z;
+                    mesh.position.z = height / 2;
+                    
+                    supportVolume = calculateSupportVolume(geometry, 45, 0.10);
+                    
+                    scene.add(mesh);
+                    if (!axes) {
+                        axes = new THREE.AxesHelper(50);
+                        scene.add(axes);
+                    }
+                    updateColor();
+                });
+        });
+        
+        const customUploadButton = document.querySelector('.upload-label');
+        customUploadButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            ucareWidget.openDialog();
+        });
+        
+        const materialColors = { PLA: ['Černá','Šedá','Bílá','Fialová','Modrá','Zelená','Červená','Růžová','Oranžová','Žlutá','Mramor','WOOD filament'], PETG: ['Černá','Bílá'], ABS: ['Černá','Bílá'], TPU: ['Černá','Bílá','Modrá','Zelená','Červená','Oranžová','Žlutá'] };
+        const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0x777777, 'WOOD filament': 0x654321 };
+        const materialSelect = document.getElementById('material');
+        const colorSelect = document.getElementById('barva');
+        const countSelect = document.getElementById('pocet-kusu');
+        for (let i = 1; i <= 20; i++) { const opt = document.createElement('option'); opt.value = i; opt.textContent = i; countSelect.appendChild(opt); }
+        ['PLA','PETG','ABS','TPU'].forEach(mat => { const opt = document.createElement('option'); opt.value = mat; opt.textContent = mat; materialSelect.appendChild(opt); });
+        
+        function refreshColors() { colorSelect.innerHTML = ''; (materialColors[materialSelect.value] || []).forEach(color => { const opt = document.createElement('option'); opt.value = color; opt.textContent = color; colorSelect.appendChild(opt); }); if (mesh) updateColor(); }
+        function updateColor() { if (mesh && mesh.material && colorSelect.value) { mesh.material.color.setHex(colorMap[colorSelect.value] || 0x888888); mesh.material.needsUpdate = true; } }
+        
+        materialSelect.addEventListener('change', refreshColors);
+        colorSelect.addEventListener('change', updateColor);
+        materialSelect.value = 'PLA';
+        refreshColors();
+        
+        document.getElementById('calculate-btn').addEventListener('click', () => {
+            if (!mesh) {
+                console.error('Výpočet nelze provést: Nebyl nahrán STL soubor.');
+                fileNameElement.textContent = 'Nejprve nahrajte STL soubor!';
+                fileNameElement.classList.add('error-message');
+                return;
+            }
 
-const controls = new THREE.OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-function animate() {
-  requestAnimationFrame(animate);
-  controls.update();
-  renderer.render(scene, camera);
-}
-animate();
-</script>
+            const densities = { PLA: 1.24, PETG: 1.27, ABS: 1.04, TPU: 1.21 };
+            const material = materialSelect.value;
+            let pevnostHodnota = parseFloat(document.getElementById('pevnost').value);
+            let infillPercent = 1.0;
+            if (pevnostHodnota === 0.1) infillPercent = 0.10;
+            else if (pevnostHodnota === 0.3) infillPercent = 0.50;
+            else if (pevnostHodnota === 1.0) infillPercent = 1.00;
+            const count = parseInt(document.getElementById('pocet-kusu').value) || 1;
 
-<script>
-// Výpočet objemu, načítání STL, update pozadí a načítání modelu
-function computeMeshVolume(geometry) {
-  const pos = geometry.attributes.position;
-  let volume = 0;
-  for (let i = 0; i < pos.count; i += 3) {
-    const ax = pos.getX(i), ay = pos.getY(i), az = pos.getZ(i);
-    const bx = pos.getX(i + 1), by = pos.getY(i + 1), bz = pos.getZ(i + 1);
-    const cx = pos.getX(i + 2), cy = pos.getY(i + 2), cz = pos.getZ(i + 2);
-    volume += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx));
-  }
-  return Math.abs(volume / 6);
-}
+            const modelMass = modelVolume * densities[material] * infillPercent;
+            const supportMass = supportVolume * densities[material];
+            const totalMassPerPiece = modelMass + supportMass;
+            const totalMass = totalMassPerPiece * count;
+            const timePrint = 7 + totalMassPerPiece / 10;
+            const cenaZaGram = (material === 'ABS') ? 5 : 4;
+            const castka = totalMass * cenaZaGram;
+            
+            document.getElementById('vypocet-objem').textContent = `Hmotnost modelu: ${modelMass.toFixed(2)} g`;
+            
+            const supportEl = document.getElementById('vypocet-podpory');
+            supportEl.textContent = `Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g`;
+            supportEl.style.display = supportMass > 0 ? 'block' : 'none';
 
-// Nastavení zobrazení laborantky/hologramu podle stavu
-function updateViewerBackground(stlLoaded) {
-  const img = document.getElementById('viewer-bg-img');
-  if (img) {
-    if (stlLoaded) {
-      img.classList.add('viewer-bg-gray');
-    } else {
-      img.classList.remove('viewer-bg-gray');
-    }
-  }
-}
+            const totalMassEl = document.getElementById('vypocet-hmotnost-celkem');
+            totalMassEl.textContent = `Celková hmotnost: ${totalMass.toFixed(2)} g / ${count} ks`;
+            totalMassEl.style.display = 'block';
 
-updateViewerBackground(false); // výchozí stav: žádný filtr
+            const meshSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
+            const rozmerText = `Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm`;
+            const rozmerElement = document.getElementById('rozmer-vypis');
+            if (rozmerElement) { rozmerElement.textContent = rozmerText; } else {
+                const rozmerNode = document.createElement('p');
+                rozmerNode.id = 'rozmer-vypis';
+                rozmerNode.textContent = rozmerText;
+                rozmerNode.style.margin = '0';
+                const resultBox = document.getElementById('vypocet-objem').parentNode;
+                resultBox.insertBefore(rozmerNode, document.getElementById('vypocet-podpory'));
+            }
 
-document.getElementById('stlInput').addEventListener('change', e => {
-  const file = e.target.files[0];
-  document.getElementById('file-name').textContent = file ? file.name : '';
-  if (!file) {
-    updateViewerBackground(false);
-    if (mesh) {
-      scene.remove(mesh);
-      mesh = null;
-    }
-    // Osy odstranit pokud nejsou model a byly přidané
-    if (axes) {
-      scene.remove(axes);
-      axes = null;
-    }
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const loader = new THREE.STLLoader();
-    const geometry = loader.parse(ev.target.result);
-    geometry.computeBoundingBox();
-    geometry.computeVertexNormals();
-    volume = computeMeshVolume(geometry);
-    const bboxSize = geometry.boundingBox.getSize(new THREE.Vector3());
-    const scale = 100 / Math.max(bboxSize.x, bboxSize.y, bboxSize.z);
-    geometry.scale(scale, scale, scale);
-    geometry.translate(
-      -(geometry.boundingBox.max.x + geometry.boundingBox.min.x) / 2,
-      -(geometry.boundingBox.max.y + geometry.boundingBox.min.y) / 2,
-      -geometry.boundingBox.min.z
-    );
-    if (mesh) scene.remove(mesh);
-    mesh = new THREE.Mesh(
-      geometry,
-      new THREE.MeshStandardMaterial({
-        color: colorMap[colorSelect.value] || 0x888888,
-        metalness: 0.3,
-        roughness: 0.5
-      })
-    );
-    scene.add(mesh);
-    // Přidej osy pouze když je model
-    if (!axes) {
-      axes = new THREE.AxesHelper(50);
-      scene.add(axes);
-    }
-    // Nastavení targetu kamery na střed modelu (základna zůstává v z=0)
-    const centerSize = geometry.boundingBox.getSize(new THREE.Vector3());
-    controls.target.set(0, 0, centerSize.z / 2);
-    camera.position.set(0, 150, centerSize.z / 2);
-    updateColor();
-    updateViewerBackground(true); // stmaví laborantku
-  };
-  reader.readAsArrayBuffer(file);
-});
-</script>
+            document.getElementById('vypocet-cena').textContent = `Odhadovaná cena: ${castka.toFixed(2)} Kč`;
+            document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${timePrint.toFixed(1)} minut`;
+            const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
+            document.getElementById('vtipna-veta').textContent = `Tisk trvá ${timePrint.toFixed(1)} minut ${jokes[Math.floor(Math.random() * jokes.length)]}`;
+            
+            const pevnostSelect = document.getElementById('pevnost');
+            const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
 
-<script>
-// Výpočet, zobrazení výsledku, vtipná věta
-
-document.getElementById('calculate-btn').addEventListener('click', () => {
-  if (!mesh) return alert('Nejprve nahrajte STL soubor.');
-  const densities = { PLA: 1.24, PETG: 1.27, ABS: 1.04, TPU: 1.21 };
-  const material = materialSelect.value;
-  const pevnost = parseFloat(document.getElementById('pevnost').value);
-  const count = parseInt(document.getElementById('pocet-kusu').value) || 1;
-  const layerHeight = 0.2;
-  const extrusionWidth = 0.4;
-  const perimeters = 2;
-  const topLayers = 5;
-  const bottomLayers = 3;
-  const meshSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
-  const xyArea = meshSize.x * meshSize.y;
-  const bottomVolume = xyArea * bottomLayers * layerHeight;
-  const topVolume = xyArea * topLayers * layerHeight;
-  const perimeterVolume = meshSize.z * perimeters * extrusionWidth * 2 * meshSize.y;
-  const shellVolume = bottomVolume + topVolume + perimeterVolume;
-  const infillVolume = Math.max(0, volume - shellVolume) * pevnost;
-  const totalVolume = shellVolume + infillVolume;
-  const mass = (totalVolume / 1000) * densities[material] * count;
-  const timePrint = 7 + mass / 10;
-  const cenaZaGram = (material === 'ABS') ? 5 : 4;
-  const castka = mass * cenaZaGram;
-  document.getElementById('vypocet-objem').textContent = `Hmotnost: ${mass.toFixed(2)} g`;
-  document.getElementById('vypocet-cena').textContent = `Odhadovaná cena: ${castka.toFixed(2)} Kč`;
-  document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${timePrint.toFixed(1)} minut`;
-  const jokes = [
-    'ale tiskne se sousedovi držák.',
-    'ale robot v kuchyni připravuje kafe.',
-    'ale nejsem doma.',
-    'ale před tebou je fronta jak na poště.',
-    'ale dnes je moc teplo.'
-  ];
-  document.getElementById('vtipna-veta').textContent = `Tisk trvá ${timePrint.toFixed(1)} minut ${jokes[Math.floor(Math.random() * jokes.length)]}`;
-});
-</script>
-
-<script>
-// POPTÁVKOVÝ FORMULÁŘ — naplnění rekapitulace (pouze jeden input)
-if (document.getElementById('poptavka-form')) {
-  document.getElementById('poptavka-form').addEventListener('submit', function(e) {
-    // Rekapitulace výsledků z kalkulačky
-    const objem = document.getElementById('vypocet-objem').textContent;
-    const cena = document.getElementById('vypocet-cena').textContent;
-    const cas = document.getElementById('vypocet-cas').textContent;
-    const vtip = document.getElementById('vtipna-veta').textContent;
-    document.getElementById('rekapitulace').value = `${objem}
-${cena}
-${cas}
-${vtip}`;
-    // Kontrola, že je vybraný STL soubor
-    const stlInput = document.getElementById('stlInput');
-    if (!stlInput.files.length) {
-      alert('Nejprve vyberte STL soubor!');
-      e.preventDefault();
-    }
-  });
-}
-</script>
-
+            document.getElementById('rekapitulace').value = `Jméno: ${document.querySelector('input[name="jmeno"]').value}
+Email: ${document.querySelector('input[name="email"]').value}
+---
+Model: ${uploadedFileName}
+Odkaz na model: ${uploadedFileUrl}
+Hmotnost modelu: ${modelMass.toFixed(2)} g
+Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g
+Celková hmotnost/ks: ${totalMassPerPiece.toFixed(2)} g
+Odhadovaná cena: ${castka.toFixed(2)} Kč
+Odhadovaný čas/ks: ${timePrint.toFixed(1)} min
+Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm
+Materiál: ${materialSelect.value}
+Barva: ${colorSelect.value}
+Pevnost: ${pevnostText}
+Počet kusů: ${count}`;
+        });
+    </script>
 </body>
 </html>
