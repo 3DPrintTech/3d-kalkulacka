@@ -73,9 +73,9 @@
                 </div>
                 <div class="bottom-right">
                     <label>Pevnost<select id="pevnost">
-                        <option value="0.1">Nízká (dekorace)</option>
-                        <option value="0.3">Střední (držáky, vizitky)</option>
-                        <option value="1.0">Vysoká (funkční díly)</option>
+                        <option value="0.1">Nízká (10%)</option>
+                        <option value="0.5">Střední (50%)</option>
+                        <option value="1.0">Vysoká (100%)</option>
                     </select></label>
                     <label>Počet kusů<select id="pocet-kusu"></select></label>
                 </div>
@@ -95,8 +95,8 @@
 
     <script>
         let mesh = null;
-        let modelVolume = 0;
-        let supportVolume = 0;
+        let totalModelVolume = 0; // Celkový objem modelu v cm^3
+        let supportVolume = 0; // Odhadovaný objem podpor v cm^3
         let uploadedFileUrl = null;
         let uploadedFileName = '';
         const fileNameElement = document.getElementById('file-name');
@@ -135,52 +135,37 @@
         }
         animate();
         
-        // --- OPRAVENÁ FUNKCE PRO ODHAD PODPOR ---
         function calculateSupportVolume(geometry, meshOffsetZ, overhangAngleDegrees = 45, supportDensity = 0.10) {
             const positions = geometry.attributes.position;
             const downVector = new THREE.Vector3(0, 0, -1);
             const angleThreshold = Math.cos((90 - overhangAngleDegrees) * Math.PI / 180);
-
             let totalSupportProjectedArea = 0;
             let totalSupportHeight = 0;
             let supportTriangleCount = 0;
-
-            const vA = new THREE.Vector3();
-            const vB = new THREE.Vector3();
-            const vC = new THREE.Vector3();
-            const normal = new THREE.Vector3();
+            const vA = new THREE.Vector3(), vB = new THREE.Vector3(), vC = new THREE.Vector3(), normal = new THREE.Vector3();
 
             for (let i = 0; i < positions.count; i += 3) {
                 vA.fromBufferAttribute(positions, i);
                 vB.fromBufferAttribute(positions, i + 1);
                 vC.fromBufferAttribute(positions, i + 2);
-
                 const faceNormal = normal.crossVectors(vB.clone().sub(vA), vC.clone().sub(vA)).normalize();
                 
                 if (faceNormal.dot(downVector) > angleThreshold) {
                     const projectedArea = Math.abs(0.5 * (vA.x * (vB.y - vC.y) + vB.x * (vC.y - vA.y) + vC.x * (vA.y - vB.y)));
                     totalSupportProjectedArea += projectedArea;
-
-                    // OPRAVA: K výšce trojúhelníku přičítáme posun celého modelu, aby výška byla vždy kladná
                     const avgHeight = ((vA.z + vB.z + vC.z) / 3) + meshOffsetZ;
-                    if (avgHeight > 0) { // Započítáváme jen výšky nad podlahou
+                    if (avgHeight > 0) {
                        totalSupportHeight += avgHeight;
                        supportTriangleCount++;
                     }
                 }
             }
-            
-            if (supportTriangleCount === 0) {
-                return 0;
-            }
-
+            if (supportTriangleCount === 0) return 0;
             const averageOverhangHeight = totalSupportHeight / supportTriangleCount;
             const estimatedFullVolume = totalSupportProjectedArea * averageOverhangHeight;
             const estimatedRealVolume = estimatedFullVolume * supportDensity;
-
             return estimatedRealVolume / 1000;
         }
-
 
         const ucareWidget = uploadcare.Widget('#ucare');
         ucareWidget.onUploadComplete(function(info) {
@@ -204,7 +189,7 @@
                         const cx = positions[i + 6], cy = positions[i + 7], cz = positions[i + 8];
                         currentModelVolume += (ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx));
                     }
-                    modelVolume = Math.abs(currentModelVolume / 6.0) / 1000;
+                    totalModelVolume = Math.abs(currentModelVolume / 6.0) / 1000;
 
                     if (mesh) scene.remove(mesh);
                     const material = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
@@ -215,7 +200,6 @@
                     const height = boundingBox.max.z - boundingBox.min.z;
                     mesh.position.z = height / 2;
                     
-                    // OPRAVA: Předáváme funkci posun modelu, aby správně počítala výšky
                     supportVolume = calculateSupportVolume(geometry, mesh.position.z, 45, 0.10);
                     
                     scene.add(mesh);
@@ -249,42 +233,88 @@
         materialSelect.value = 'PLA';
         refreshColors();
         
+        // =================================================================
+        // KOMPLETNĚ PŘEPRACOVANÝ VÝPOČET - SIMULACE SLICERU
+        // =================================================================
         document.getElementById('calculate-btn').addEventListener('click', () => {
             if (!mesh) {
-                console.error('Výpočet nelze provést: Nebyl nahrán STL soubor.');
                 fileNameElement.textContent = 'Nejprve nahrajte STL soubor!';
                 fileNameElement.classList.add('error-message');
                 return;
             }
 
+            // --- Načtení parametrů ---
             const densities = { PLA: 1.24, PETG: 1.27, ABS: 1.04, TPU: 1.21 };
             const material = materialSelect.value;
-            let pevnostHodnota = parseFloat(document.getElementById('pevnost').value);
-            let infillPercent = 1.0;
-            if (pevnostHodnota === 0.1) infillPercent = 0.10;
-            else if (pevnostHodnota === 0.3) infillPercent = 0.50;
-            else if (pevnostHodnota === 1.0) infillPercent = 1.00;
+            const infillPercent = parseFloat(document.getElementById('pevnost').value);
             const count = parseInt(document.getElementById('pocet-kusu').value) || 1;
+            const meshSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
 
-            const modelMass = modelVolume * densities[material] * infillPercent;
+            // --- Slicer parametry (dle zadání) ---
+            const layerHeight = 0.2; // mm
+            const extrusionWidth = 0.4; // mm
+            const perimeters = 3;
+            const topLayers = 5;
+            const bottomLayers = 3;
+            const printSpeed = 60; // mm/s
+            const timePerLayerChange = 2.5; // sekundy
+
+            // --- Výpočet objemu a hmotnosti (v cm^3 a gramech) ---
+            const totalModelVolumeCm3 = totalModelVolume; // Už je v cm^3
+            
+            // Odhad objemu skořápky
+            const topBottomAreaCm2 = (meshSize.x * meshSize.y) / 100; // Plocha v cm^2
+            const topVolumeCm3 = topBottomAreaCm2 * (topLayers * layerHeight / 10);
+            const bottomVolumeCm3 = topBottomAreaCm2 * (bottomLayers * layerHeight / 10);
+            
+            const perimeterLengthCm = 2 * (meshSize.x + meshSize.y) / 10;
+            const perimeterWallThicknessCm = (perimeters * extrusionWidth) / 10;
+            const perimeterVolumeCm3 = perimeterLengthCm * (meshSize.z / 10) * perimeterWallThicknessCm;
+
+            const shellVolumeCm3 = topVolumeCm3 + bottomVolumeCm3 + perimeterVolumeCm3;
+            
+            // Výpočet objemu výplně
+            const infillableVolumeCm3 = Math.max(0, totalModelVolumeCm3 - shellVolumeCm3);
+            const infillVolumeCm3 = infillableVolumeCm3 * infillPercent;
+
+            // Finální objem a hmotnost modelu
+            const finalModelVolumeCm3 = shellVolumeCm3 + infillVolumeCm3;
+            const modelMass = finalModelVolumeCm3 * densities[material];
+
+            // Hmotnost podpor
             const supportMass = supportVolume * densities[material];
+            
+            // Celkové hodnoty
             const totalMassPerPiece = modelMass + supportMass;
             const totalMass = totalMassPerPiece * count;
-            const timePrint = 7 + totalMassPerPiece / 10;
+
+            // --- Nový výpočet času ---
+            const totalVolumeToExtrudeCm3 = (finalModelVolumeCm3 + supportVolume) * count;
+            const extrusionCrossSectionMm2 = extrusionWidth * layerHeight;
+            const lengthOfExtrudedFilamentMm = (totalVolumeToExtrudeCm3 * 1000) / extrusionCrossSectionMm2;
+            const extrusionTimeSeconds = lengthOfExtrudedFilamentMm / printSpeed;
+            
+            const numberOfLayers = meshSize.z / layerHeight;
+            const layerChangeTimeSeconds = numberOfLayers * timePerLayerChange * count;
+            
+            const totalTimeSeconds = extrusionTimeSeconds + layerChangeTimeSeconds;
+            const totalTimeMinutes = totalTimeSeconds / 60;
+
+            // --- Výpočet ceny ---
             const cenaZaGram = (material === 'ABS') ? 5 : 4;
             const castka = totalMass * cenaZaGram;
             
+            // --- Zobrazení výsledků ---
             document.getElementById('vypocet-objem').textContent = `Hmotnost modelu: ${modelMass.toFixed(2)} g`;
             
             const supportEl = document.getElementById('vypocet-podpory');
             supportEl.textContent = `Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g`;
-            supportEl.style.display = supportMass > 0.01 ? 'block' : 'none'; // Zobrazí se jen pokud je hmotnost smysluplná
+            supportEl.style.display = supportMass > 0.01 ? 'block' : 'none';
 
             const totalMassEl = document.getElementById('vypocet-hmotnost-celkem');
             totalMassEl.textContent = `Celková hmotnost: ${totalMass.toFixed(2)} g / ${count} ks`;
             totalMassEl.style.display = 'block';
 
-            const meshSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
             const rozmerText = `Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm`;
             const rozmerElement = document.getElementById('rozmer-vypis');
             if (rozmerElement) { rozmerElement.textContent = rozmerText; } else {
@@ -297,9 +327,9 @@
             }
 
             document.getElementById('vypocet-cena').textContent = `Odhadovaná cena: ${castka.toFixed(2)} Kč`;
-            document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${timePrint.toFixed(1)} minut`;
+            document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${totalTimeMinutes.toFixed(1)} minut`;
             const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
-            document.getElementById('vtipna-veta').textContent = `Tisk trvá ${timePrint.toFixed(1)} minut ${jokes[Math.floor(Math.random() * jokes.length)]}`;
+            document.getElementById('vtipna-veta').textContent = `Tisk trvá ${totalTimeMinutes.toFixed(1)} minut ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
             const pevnostSelect = document.getElementById('pevnost');
             const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
@@ -313,7 +343,7 @@ Hmotnost modelu: ${modelMass.toFixed(2)} g
 Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g
 Celková hmotnost/ks: ${totalMassPerPiece.toFixed(2)} g
 Odhadovaná cena: ${castka.toFixed(2)} Kč
-Odhadovaný čas/ks: ${timePrint.toFixed(1)} min
+Odhadovaný čas/ks: ${totalTimeMinutes.toFixed(1)} min
 Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm
 Materiál: ${materialSelect.value}
 Barva: ${colorSelect.value}
