@@ -19,8 +19,14 @@
         .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
         #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; box-sizing: border-box; position: relative; }
         .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
-        /* NOVÝ, SILNĚJŠÍ STÍN TEXTU */
-        .result-text { position: relative; z-index: 2; text-shadow: 0 0 4px black, 0 0 12px black; }
+        .result-text { position: relative; z-index: 2; }
+        /* NOVÝ STYL PRO ZVÝRAZNĚNÍ VÝSLEDKŮ */
+        .result-text .value {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
         .controls-bottom { display: flex; gap: 20px; justify-content: center; }
         .bottom-left, .bottom-right { width: 360px; display: flex; flex-direction: column; gap: 10px; flex: none; }
         .upload-label, #calculate-btn { padding: 10px; border: none; border-radius: 6px; background: linear-gradient(to right, #0ff, #f0f); color: black; font-weight: bold; text-align: center; cursor: pointer; margin: 0; width: 100%; box-sizing: border-box; }
@@ -56,12 +62,13 @@
                         <img class="result-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/laborantka%20s%20otazniky.png" alt="laborantka s otazníky">
                         <div class="result-text">
                             <h3>Výsledek výpočtu</h3>
-                            <p id="vypocet-objem">-</p>
-                            <p id="vypocet-podpory" style="display:none;"></p>
-                            <p id="vypocet-hmotnost-celkem" style="display:none; font-weight: bold;"></p>
-                            <p id="vypocet-cena">-</p>
-                            <p id="vypocet-cas">-</p>
-                            <p id="vtipna-veta">-</p>
+                            <p id="rozmer-vypis" style="display: none;"></p>
+                            <p id="vypocet-objem" style="display: none;"></p>
+                            <p id="vypocet-podpory" style="display: none;"></p>
+                            <p id="vypocet-hmotnost-celkem" style="display: none;"></p>
+                            <p id="vypocet-cena" style="display: none;"></p>
+                            <p id="vypocet-cas" style="display: none;"></p>
+                            <p id="vtipna-veta" style="display: none;"></p>
                         </div>
                     </div>
                     <button id="calculate-btn">Výpočet tisku</button>
@@ -129,15 +136,12 @@
         controls.target.set(0, 0, 0);
         controls.enableDamping = true;
         
-        // --- NOVÁ LOGIKA PRO MATERIÁLY A TEXTURY ---
         const textureLoader = new THREE.TextureLoader();
-        // Načteme MatCap texturu, která nepotřebuje UV souřadnice
-        const marbleMatcapTexture = textureLoader.load('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/marble_matcap.jpg');
+        // NOVÁ, KVALITNĚJŠÍ A JASNĚJŠÍ MATCAP TEXTURA
+        const marbleMatcapTexture = textureLoader.load('https://raw.githubusercontent.com/nidorx/matcaps/master/1024/2E768C_B8C6D3_72A1B5_5988A3.png');
         
-        // Vytvoříme si oba materiály předem
         const standardMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
         const matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: marbleMatcapTexture });
-        // --- KONEC NOVÉ LOGIKY ---
 
         function animate() {
             requestAnimationFrame(animate);
@@ -223,7 +227,6 @@
 
                     if (mesh) scene.remove(mesh);
                     
-                    // Při vytvoření meshe použijeme náš standardní materiál
                     mesh = new THREE.Mesh(geometry, standardMaterial);
                     
                     geometry.center();
@@ -258,16 +261,13 @@
         
         function refreshColors() { colorSelect.innerHTML = ''; (materialColors[materialSelect.value] || []).forEach(color => { const opt = document.createElement('option'); opt.value = color; opt.textContent = color; colorSelect.appendChild(opt); }); if (mesh) updateColor(); }
         
-        // NOVÁ FUNKCE, KTERÁ PŘEPÍNÁ MEZI MATERIÁLY
         function updateColor() {
             if (!mesh) return;
             const selectedColorName = colorSelect.value;
             
             if (selectedColorName === 'Mramor') {
-                // Pokud je vybrán mramor, použijeme Matcap materiál
                 mesh.material = matcapMaterial;
             } else {
-                // Pro všechny ostatní barvy použijeme standardní materiál
                 mesh.material = standardMaterial;
                 standardMaterial.color.setHex(colorMap[selectedColorName] || 0x888888);
             }
@@ -321,31 +321,32 @@
             const cenaZaGram = (material === 'ABS') ? 5 : 4;
             const castka = totalMass * cenaZaGram;
             
-            document.getElementById('vypocet-objem').textContent = `Hmotnost modelu: ${modelMass.toFixed(2)} g`;
-            const supportEl = document.getElementById('vypocet-podpory');
-            supportEl.textContent = `Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g`;
-            supportEl.style.display = supportMass > 0.01 ? 'block' : 'none';
-            const totalMassEl = document.getElementById('vypocet-hmotnost-celkem');
-            totalMassEl.textContent = `Celková hmotnost: ${totalMass.toFixed(2)} g / ${count} ks`;
-            totalMassEl.style.display = 'block';
-
-            const rozmerText = `Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm`;
-            const rozmerElement = document.getElementById('rozmer-vypis');
-            if (rozmerElement) { rozmerElement.textContent = rozmerText; } else {
-                const rozmerNode = document.createElement('p');
-                rozmerNode.id = 'rozmer-vypis';
-                rozmerNode.textContent = rozmerText;
-                rozmerNode.style.margin = '0';
-                const resultBox = document.getElementById('vypocet-objem').parentNode;
-                resultBox.insertBefore(rozmerNode, document.getElementById('vypocet-podpory'));
-            }
-
+            // --- NOVÉ ZOBRAZOVÁNÍ VÝSLEDKŮ ---
             const finalTimeText = formatTime(totalTimeMinutes);
             const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
-            document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
-            const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
-            document.getElementById('vtipna-veta').textContent = `Tisk jednoho kusu trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
+            // Definujeme prvky, do kterých budeme zapisovat
+            const rozmerEl = document.getElementById('rozmer-vypis');
+            const objemEl = document.getElementById('vypocet-objem');
+            const podporyEl = document.getElementById('vypocet-podpory');
+            const celkemEl = document.getElementById('vypocet-hmotnost-celkem');
+            const cenaEl = document.getElementById('vypocet-cena');
+            const casEl = document.getElementById('vypocet-cas');
+            const vtipEl = document.getElementById('vtipna-veta');
+            
+            // Naplníme je obsahem pomocí innerHTML a našeho nového stylu
+            rozmerEl.innerHTML = `Rozměr: <span class="value">${meshSize.x.toFixed(1)}×${meshSize.y.toFixed(1)}×${meshSize.z.toFixed(1)} mm</span>`;
+            objemEl.innerHTML = `Hmotnost modelu: <span class="value">${modelMass.toFixed(2)} g</span>`;
+            podporyEl.innerHTML = `Hmotnost podpor: <span class="value">${supportMass.toFixed(2)} g</span>`;
+            celkemEl.innerHTML = `Celková hmotnost: <span class="value">${totalMass.toFixed(2)} g / ${count} ks</span>`;
+            cenaEl.innerHTML = `Odhadovaná cena: <span class="value">${castka.toFixed(2)} Kč</span>`;
+            casEl.innerHTML = `Odhadovaný čas tisku: <span class="value">${finalTimeText}</span>`;
+            vtipEl.innerHTML = `Tisk jednoho kusu trvá <span class="value">${finalTimeTextJokes}</span>, ale tiskne se sousedovi držák.`;
+
+            // Zobrazíme všechny prvky
+            [rozmerEl, objemEl, celkemEl, cenaEl, casEl, vtipEl].forEach(el => el.style.display = 'block');
+            podporyEl.style.display = supportMass > 0.01 ? 'block' : 'none';
+
             const pevnostSelect = document.getElementById('pevnost');
             const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
 
