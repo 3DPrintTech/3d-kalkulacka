@@ -19,7 +19,6 @@
         .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
         #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; position: relative; }
         .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
-        /* ÚPRAVA: Zvětšení písma a jemnější stín */
         .result-text { position: relative; z-index: 2; font-size: 15px; }
         .result-text p {
             margin: 4px 0;
@@ -137,24 +136,6 @@
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 0, 0);
         controls.enableDamping = true;
-        
-        const textureLoader = new THREE.TextureLoader();
-        textureLoader.setCrossOrigin('anonymous');
-        let marbleMatcapTexture = null;
-        textureLoader.load(
-            'https://raw.githubusercontent.com/nidorx/matcaps/master/1024/B9B0A7_6F5D4A_837B70_7A6A5C.png',
-            function (texture) {
-                marbleMatcapTexture = texture;
-                console.log("Matcap textura pro mramor úspěšně načtena.");
-            },
-            undefined,
-            function (err) {
-                console.error('Chyba: Nepodařilo se načíst texturu mramoru.', err);
-            }
-        );
-        
-        const standardMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
-        let matcapMaterial = null;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -239,12 +220,16 @@
                     totalModelVolume = Math.abs(currentModelVolume / 6.0) / 1000;
 
                     if (mesh) scene.remove(mesh);
-                    mesh = new THREE.Mesh(geometry, standardMaterial);
+                    const material = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    
                     geometry.center();
                     const boundingBox = new THREE.Box3().setFromObject(mesh);
                     const height = boundingBox.max.z - boundingBox.min.z;
                     mesh.position.z = height / 2;
+                    
                     supportVolume = calculateSupportVolume(geometry, mesh.position.z, 45, 0.10);
+                    
                     scene.add(mesh);
                     if (!axes) {
                         axes = new THREE.AxesHelper(50);
@@ -258,8 +243,8 @@
         customUploadButton.addEventListener('click', function(e) { e.preventDefault(); ucareWidget.openDialog(); });
         
         const materialColors = { PLA: ['Černá','Šedá','Bílá','Fialová','Modrá','Zelená','Červená','Růžová','Oranžová','Žlutá','Mramor','WOOD filament'], PETG: ['Černá','Bílá'], ABS: ['Černá','Bílá'], TPU: ['Černá','Bílá','Modrá','Zelená','Červená','Oranžová','Žlutá'] };
-        // ÚPRAVA: Fallback barva pro mramor je nyní šedá
-        const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0xcccccc, 'WOOD filament': 0x654321 };
+        // ÚPRAVA: "Mramor" je nyní spolehlivá šedá barva
+        const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0x999999, 'WOOD filament': 0x654321 };
         const materialSelect = document.getElementById('material');
         const colorSelect = document.getElementById('barva');
         const countSelect = document.getElementById('pocet-kusu');
@@ -268,18 +253,10 @@
         
         function refreshColors() { colorSelect.innerHTML = ''; (materialColors[materialSelect.value] || []).forEach(color => { const opt = document.createElement('option'); opt.value = color; opt.textContent = color; colorSelect.appendChild(opt); }); if (mesh) updateColor(); }
         
+        // ZJEDNODUŠENÁ FUNKCE: Už se nesnaží načítat textury
         function updateColor() {
-            if (!mesh) return;
-            const selectedColorName = colorSelect.value;
-            
-            // Použijeme Matcap POUZE pokud je vybrán mramor A POKUD se textura úspěšně načetla
-            if (selectedColorName === 'Mramor' && marbleMatcapTexture) {
-                if (!matcapMaterial) matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: marbleMatcapTexture });
-                mesh.material = matcapMaterial;
-            } else {
-                // Pro všechny ostatní barvy (včetně mramoru, pokud se textura nenačetla) použijeme standardní materiál
-                mesh.material = standardMaterial;
-                standardMaterial.color.setHex(colorMap[selectedColorName] || 0x888888);
+            if (mesh && mesh.material) {
+                mesh.material.color.setHex(colorMap[colorSelect.value] || 0x888888);
             }
         }
         
@@ -342,7 +319,7 @@
             document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
             const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
             const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
-            // ÚPRAVA: Změna textu věty
+            // ÚPRAVA TEXTU VĚTY
             document.getElementById('vtipna-veta').textContent = `Tisk sice trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
             const pevnostSelect = document.getElementById('pevnost');
