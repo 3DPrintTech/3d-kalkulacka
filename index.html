@@ -20,12 +20,14 @@
         #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; box-sizing: border-box; position: relative; }
         .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
         .result-text { position: relative; z-index: 2; }
-        /* NOVÝ STYL PRO ZVÝRAZNĚNÍ VÝSLEDKŮ */
-        .result-text .value {
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 1px 6px;
-            border-radius: 4px;
-            font-weight: bold;
+        /* NOVÝ STYL PRO TEXT - EFEKT OBRYSU */
+        .result-text p {
+            margin: 4px 0;
+            text-shadow: 
+                -1px -1px 0 #000,  
+                 1px -1px 0 #000,
+                -1px  1px 0 #000,
+                 1px  1px 0 #000;
         }
         .controls-bottom { display: flex; gap: 20px; justify-content: center; }
         .bottom-left, .bottom-right { width: 360px; display: flex; flex-direction: column; gap: 10px; flex: none; }
@@ -65,7 +67,7 @@
                             <p id="rozmer-vypis" style="display: none;"></p>
                             <p id="vypocet-objem" style="display: none;"></p>
                             <p id="vypocet-podpory" style="display: none;"></p>
-                            <p id="vypocet-hmotnost-celkem" style="display: none;"></p>
+                            <p id="vypocet-hmotnost-celkem" style="display: none; font-weight: bold;"></p>
                             <p id="vypocet-cena" style="display: none;"></p>
                             <p id="vypocet-cas" style="display: none;"></p>
                             <p id="vtipna-veta" style="display: none;"></p>
@@ -136,12 +138,27 @@
         controls.target.set(0, 0, 0);
         controls.enableDamping = true;
         
+        // --- NOVÁ LOGIKA PRO MATERIÁLY S POJISTKOU PROTI CHYBĚ ---
         const textureLoader = new THREE.TextureLoader();
-        // NOVÁ, KVALITNĚJŠÍ A JASNĚJŠÍ MATCAP TEXTURA
-        const marbleMatcapTexture = textureLoader.load('https://raw.githubusercontent.com/nidorx/matcaps/master/1024/2E768C_B8C6D3_72A1B5_5988A3.png');
+        textureLoader.setCrossOrigin('anonymous'); // Pojistka pro načítání z cizích domén
+
+        let marbleMatcapTexture = null;
+        textureLoader.load(
+            'https://raw.githubusercontent.com/nidorx/matcaps/master/1024/B9B0A7_6F5D4A_837B70_7A6A5C.png',
+            function (texture) { // Co se stane při úspěšném načtení
+                marbleMatcapTexture = texture;
+                console.log("Matcap textura pro mramor úspěšně načtena.");
+            },
+            undefined, // onProgress callback - nepotřebujeme
+            function (err) { // Co se stane PŘI CHYBĚ
+                console.error('Chyba: Nepodařilo se načíst texturu mramoru.', err);
+                // marbleMatcapTexture zůstane null
+            }
+        );
         
         const standardMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
-        const matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: marbleMatcapTexture });
+        // Matcap materiál vytvoříme až když je potřeba, s ověřenou texturou
+        let matcapMaterial = null;
 
         function animate() {
             requestAnimationFrame(animate);
@@ -226,16 +243,12 @@
                     totalModelVolume = Math.abs(currentModelVolume / 6.0) / 1000;
 
                     if (mesh) scene.remove(mesh);
-                    
                     mesh = new THREE.Mesh(geometry, standardMaterial);
-                    
                     geometry.center();
                     const boundingBox = new THREE.Box3().setFromObject(mesh);
                     const height = boundingBox.max.z - boundingBox.min.z;
                     mesh.position.z = height / 2;
-                    
                     supportVolume = calculateSupportVolume(geometry, mesh.position.z, 45, 0.10);
-                    
                     scene.add(mesh);
                     if (!axes) {
                         axes = new THREE.AxesHelper(50);
@@ -246,13 +259,10 @@
         });
         
         const customUploadButton = document.querySelector('.upload-label');
-        customUploadButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            ucareWidget.openDialog();
-        });
+        customUploadButton.addEventListener('click', function(e) { e.preventDefault(); ucareWidget.openDialog(); });
         
         const materialColors = { PLA: ['Černá','Šedá','Bílá','Fialová','Modrá','Zelená','Červená','Růžová','Oranžová','Žlutá','Mramor','WOOD filament'], PETG: ['Černá','Bílá'], ABS: ['Černá','Bílá'], TPU: ['Černá','Bílá','Modrá','Zelená','Červená','Oranžová','Žlutá'] };
-        const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0xffffff, 'WOOD filament': 0x654321 };
+        const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0xcccccc, 'WOOD filament': 0x654321 };
         const materialSelect = document.getElementById('material');
         const colorSelect = document.getElementById('barva');
         const countSelect = document.getElementById('pocet-kusu');
@@ -265,7 +275,8 @@
             if (!mesh) return;
             const selectedColorName = colorSelect.value;
             
-            if (selectedColorName === 'Mramor') {
+            if (selectedColorName === 'Mramor' && marbleMatcapTexture) {
+                if (!matcapMaterial) matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: marbleMatcapTexture });
                 mesh.material = matcapMaterial;
             } else {
                 mesh.material = standardMaterial;
@@ -290,7 +301,6 @@
             const infillPercent = parseFloat(document.getElementById('pevnost').value);
             const count = parseInt(document.getElementById('pocet-kusu').value) || 1;
             const meshSize = mesh.geometry.boundingBox.getSize(new THREE.Vector3());
-
             const layerHeight = 0.2, extrusionWidth = 0.4, perimeters = 3, topLayers = 5, bottomLayers = 3, printSpeed = 60, timePerLayerChange = 2.5;
 
             const totalModelVolumeCm3 = totalModelVolume;
@@ -308,7 +318,6 @@
             const supportMass = supportVolume * densities[material];
             const totalMassPerPiece = modelMass + supportMass;
             const totalMass = totalMassPerPiece * count;
-
             const totalVolumeToExtrudeCm3 = (finalModelVolumeCm3 + supportVolume) * count;
             const extrusionCrossSectionMm2 = extrusionWidth * layerHeight;
             const lengthOfExtrudedFilamentMm = (totalVolumeToExtrudeCm3 * 1000) / extrusionCrossSectionMm2;
@@ -317,54 +326,31 @@
             const layerChangeTimeSeconds = numberOfLayers * timePerLayerChange * count;
             const totalTimeSeconds = extrusionTimeSeconds + layerChangeTimeSeconds;
             const totalTimeMinutes = totalTimeSeconds / 60;
-
             const cenaZaGram = (material === 'ABS') ? 5 : 4;
             const castka = totalMass * cenaZaGram;
             
-            // --- NOVÉ ZOBRAZOVÁNÍ VÝSLEDKŮ ---
+            const allResultElements = document.querySelectorAll('.result-text p');
+            allResultElements.forEach(el => {
+                el.style.display = 'block';
+                el.innerHTML = ''; // Vyčistíme obsah před naplněním
+            });
+            
+            document.getElementById('rozmer-vypis').textContent = `Rozměr: ${meshSize.x.toFixed(1)}×${meshSize.y.toFixed(1)}×${meshSize.z.toFixed(1)} mm`;
+            document.getElementById('vypocet-objem').textContent = `Hmotnost modelu: ${modelMass.toFixed(2)} g`;
+            const supportEl = document.getElementById('vypocet-podpory');
+            supportEl.textContent = `Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g`;
+            supportEl.style.display = supportMass > 0.01 ? 'block' : 'none';
+            document.getElementById('vypocet-hmotnost-celkem').textContent = `Celková hmotnost: ${totalMass.toFixed(2)} g / ${count} ks`;
+            document.getElementById('vypocet-cena').textContent = `Odhadovaná cena: ${castka.toFixed(2)} Kč`;
             const finalTimeText = formatTime(totalTimeMinutes);
+            document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
             const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
+            const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
+            document.getElementById('vtipna-veta').textContent = `Tisk jednoho kusu trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
-            // Definujeme prvky, do kterých budeme zapisovat
-            const rozmerEl = document.getElementById('rozmer-vypis');
-            const objemEl = document.getElementById('vypocet-objem');
-            const podporyEl = document.getElementById('vypocet-podpory');
-            const celkemEl = document.getElementById('vypocet-hmotnost-celkem');
-            const cenaEl = document.getElementById('vypocet-cena');
-            const casEl = document.getElementById('vypocet-cas');
-            const vtipEl = document.getElementById('vtipna-veta');
-            
-            // Naplníme je obsahem pomocí innerHTML a našeho nového stylu
-            rozmerEl.innerHTML = `Rozměr: <span class="value">${meshSize.x.toFixed(1)}×${meshSize.y.toFixed(1)}×${meshSize.z.toFixed(1)} mm</span>`;
-            objemEl.innerHTML = `Hmotnost modelu: <span class="value">${modelMass.toFixed(2)} g</span>`;
-            podporyEl.innerHTML = `Hmotnost podpor: <span class="value">${supportMass.toFixed(2)} g</span>`;
-            celkemEl.innerHTML = `Celková hmotnost: <span class="value">${totalMass.toFixed(2)} g / ${count} ks</span>`;
-            cenaEl.innerHTML = `Odhadovaná cena: <span class="value">${castka.toFixed(2)} Kč</span>`;
-            casEl.innerHTML = `Odhadovaný čas tisku: <span class="value">${finalTimeText}</span>`;
-            vtipEl.innerHTML = `Tisk jednoho kusu trvá <span class="value">${finalTimeTextJokes}</span>, ale tiskne se sousedovi držák.`;
-
-            // Zobrazíme všechny prvky
-            [rozmerEl, objemEl, celkemEl, cenaEl, casEl, vtipEl].forEach(el => el.style.display = 'block');
-            podporyEl.style.display = supportMass > 0.01 ? 'block' : 'none';
-
             const pevnostSelect = document.getElementById('pevnost');
             const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
-
-            document.getElementById('rekapitulace').value = `Jméno: ${document.querySelector('input[name="jmeno"]').value}
-Email: ${document.querySelector('input[name="email"]').value}
----
-Model: ${uploadedFileName}
-Odkaz na model: ${uploadedFileUrl}
-Hmotnost modelu: ${modelMass.toFixed(2)} g
-Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g
-Celková hmotnost/ks: ${totalMassPerPiece.toFixed(2)} g
-Odhadovaná cena: ${castka.toFixed(2)} Kč
-Odhadovaný čas/ks: ${formatTime(totalTimeMinutes / count)}
-Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm
-Materiál: ${materialSelect.value}
-Barva: ${colorSelect.value}
-Pevnost: ${pevnostText}
-Počet kusů: ${count}`;
+            document.getElementById('rekapitulace').value = `Jméno: ${document.querySelector('input[name="jmeno"]').value}\nEmail: ${document.querySelector('input[name="email"]').value}\n---\nModel: ${uploadedFileName}\nOdkaz na model: ${uploadedFileUrl}\nHmotnost modelu: ${modelMass.toFixed(2)} g\nHmotnost podpor (odhad): ${supportMass.toFixed(2)} g\nCelková hmotnost/ks: ${totalMassPerPiece.toFixed(2)} g\nOdhadovaná cena: ${castka.toFixed(2)} Kč\nOdhadovaný čas/ks: ${formatTime(totalTimeMinutes / count)}\nRozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm\nMateriál: ${materialSelect.value}\nBarva: ${colorSelect.value}\nPevnost: ${pevnostText}\nPočet kusů: ${count}`;
         });
     </script>
 </body>
