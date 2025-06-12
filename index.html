@@ -17,10 +17,10 @@
         .viewer-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; transition: filter 0.4s; }
         .viewer-bg-gray { filter: grayscale(1) brightness(0.7) blur(0.7px); opacity: 0.63; transition: filter 0.4s, opacity 0.4s; }
         .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
-        #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; box-sizing: border-box; position: relative; }
+        #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; position: relative; }
         .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
-        .result-text { position: relative; z-index: 2; }
-        /* NOVÝ STYL PRO TEXT - EFEKT OBRYSU */
+        /* ÚPRAVA: Zvětšení písma a jemnější stín */
+        .result-text { position: relative; z-index: 2; font-size: 15px; }
         .result-text p {
             margin: 4px 0;
             text-shadow: 
@@ -138,26 +138,22 @@
         controls.target.set(0, 0, 0);
         controls.enableDamping = true;
         
-        // --- NOVÁ LOGIKA PRO MATERIÁLY S POJISTKOU PROTI CHYBĚ ---
         const textureLoader = new THREE.TextureLoader();
-        textureLoader.setCrossOrigin('anonymous'); // Pojistka pro načítání z cizích domén
-
+        textureLoader.setCrossOrigin('anonymous');
         let marbleMatcapTexture = null;
         textureLoader.load(
             'https://raw.githubusercontent.com/nidorx/matcaps/master/1024/B9B0A7_6F5D4A_837B70_7A6A5C.png',
-            function (texture) { // Co se stane při úspěšném načtení
+            function (texture) {
                 marbleMatcapTexture = texture;
                 console.log("Matcap textura pro mramor úspěšně načtena.");
             },
-            undefined, // onProgress callback - nepotřebujeme
-            function (err) { // Co se stane PŘI CHYBĚ
+            undefined,
+            function (err) {
                 console.error('Chyba: Nepodařilo se načíst texturu mramoru.', err);
-                // marbleMatcapTexture zůstane null
             }
         );
         
         const standardMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
-        // Matcap materiál vytvoříme až když je potřeba, s ověřenou texturou
         let matcapMaterial = null;
 
         function animate() {
@@ -262,6 +258,7 @@
         customUploadButton.addEventListener('click', function(e) { e.preventDefault(); ucareWidget.openDialog(); });
         
         const materialColors = { PLA: ['Černá','Šedá','Bílá','Fialová','Modrá','Zelená','Červená','Růžová','Oranžová','Žlutá','Mramor','WOOD filament'], PETG: ['Černá','Bílá'], ABS: ['Černá','Bílá'], TPU: ['Černá','Bílá','Modrá','Zelená','Červená','Oranžová','Žlutá'] };
+        // ÚPRAVA: Fallback barva pro mramor je nyní šedá
         const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0xcccccc, 'WOOD filament': 0x654321 };
         const materialSelect = document.getElementById('material');
         const colorSelect = document.getElementById('barva');
@@ -275,10 +272,12 @@
             if (!mesh) return;
             const selectedColorName = colorSelect.value;
             
+            // Použijeme Matcap POUZE pokud je vybrán mramor A POKUD se textura úspěšně načetla
             if (selectedColorName === 'Mramor' && marbleMatcapTexture) {
                 if (!matcapMaterial) matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: marbleMatcapTexture });
                 mesh.material = matcapMaterial;
             } else {
+                // Pro všechny ostatní barvy (včetně mramoru, pokud se textura nenačetla) použijeme standardní materiál
                 mesh.material = standardMaterial;
                 standardMaterial.color.setHex(colorMap[selectedColorName] || 0x888888);
             }
@@ -330,12 +329,9 @@
             const castka = totalMass * cenaZaGram;
             
             const allResultElements = document.querySelectorAll('.result-text p');
-            allResultElements.forEach(el => {
-                el.style.display = 'block';
-                el.innerHTML = ''; // Vyčistíme obsah před naplněním
-            });
+            allResultElements.forEach(el => { el.style.display = 'block'; });
             
-            document.getElementById('rozmer-vypis').textContent = `Rozměr: ${meshSize.x.toFixed(1)}×${meshSize.y.toFixed(1)}×${meshSize.z.toFixed(1)} mm`;
+            document.getElementById('rozmer-vypis').textContent = `Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm`;
             document.getElementById('vypocet-objem').textContent = `Hmotnost modelu: ${modelMass.toFixed(2)} g`;
             const supportEl = document.getElementById('vypocet-podpory');
             supportEl.textContent = `Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g`;
@@ -346,7 +342,8 @@
             document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
             const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
             const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
-            document.getElementById('vtipna-veta').textContent = `Tisk jednoho kusu trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
+            // ÚPRAVA: Změna textu věty
+            document.getElementById('vtipna-veta').textContent = `Tisk sice trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
             const pevnostSelect = document.getElementById('pevnost');
             const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
