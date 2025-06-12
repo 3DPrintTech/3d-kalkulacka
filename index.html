@@ -135,7 +135,8 @@
         }
         animate();
         
-        function calculateSupportVolume(geometry, overhangAngleDegrees = 45, supportDensity = 0.10) {
+        // --- OPRAVENÁ FUNKCE PRO ODHAD PODPOR ---
+        function calculateSupportVolume(geometry, meshOffsetZ, overhangAngleDegrees = 45, supportDensity = 0.10) {
             const positions = geometry.attributes.position;
             const downVector = new THREE.Vector3(0, 0, -1);
             const angleThreshold = Math.cos((90 - overhangAngleDegrees) * Math.PI / 180);
@@ -159,9 +160,13 @@
                 if (faceNormal.dot(downVector) > angleThreshold) {
                     const projectedArea = Math.abs(0.5 * (vA.x * (vB.y - vC.y) + vB.x * (vC.y - vA.y) + vC.x * (vA.y - vB.y)));
                     totalSupportProjectedArea += projectedArea;
-                    const avgHeight = (vA.z + vB.z + vC.z) / 3;
-                    totalSupportHeight += avgHeight;
-                    supportTriangleCount++;
+
+                    // OPRAVA: K výšce trojúhelníku přičítáme posun celého modelu, aby výška byla vždy kladná
+                    const avgHeight = ((vA.z + vB.z + vC.z) / 3) + meshOffsetZ;
+                    if (avgHeight > 0) { // Započítáváme jen výšky nad podlahou
+                       totalSupportHeight += avgHeight;
+                       supportTriangleCount++;
+                    }
                 }
             }
             
@@ -210,7 +215,8 @@
                     const height = boundingBox.max.z - boundingBox.min.z;
                     mesh.position.z = height / 2;
                     
-                    supportVolume = calculateSupportVolume(geometry, 45, 0.10);
+                    // OPRAVA: Předáváme funkci posun modelu, aby správně počítala výšky
+                    supportVolume = calculateSupportVolume(geometry, mesh.position.z, 45, 0.10);
                     
                     scene.add(mesh);
                     if (!axes) {
@@ -272,7 +278,7 @@
             
             const supportEl = document.getElementById('vypocet-podpory');
             supportEl.textContent = `Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g`;
-            supportEl.style.display = supportMass > 0 ? 'block' : 'none';
+            supportEl.style.display = supportMass > 0.01 ? 'block' : 'none'; // Zobrazí se jen pokud je hmotnost smysluplná
 
             const totalMassEl = document.getElementById('vypocet-hmotnost-celkem');
             totalMassEl.textContent = `Celková hmotnost: ${totalMass.toFixed(2)} g / ${count} ks`;
