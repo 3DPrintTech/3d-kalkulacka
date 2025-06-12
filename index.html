@@ -91,12 +91,11 @@
             </div>
         </div>
         <div class="poptavka-box">
-            <form id="poptavka-form" action="https://formspree.io/f/mgvyawwz" method="POST" enctype="multipart/form-data">
+            <form id="poptavka-form" action="https://formspree.io/f/mgvyawwz" method="POST">
                 <h3 style="margin-bottom:8px;">Poptávka tisku</h3>
                 <input type="text" name="jmeno" placeholder="Vaše jméno" required>
                 <input type="email" name="email" id="email-input" placeholder="Váš e-mail" required>
                 <textarea name="rekapitulace" id="rekapitulace" style="display:none;"></textarea>
-                <input type="hidden" name="_next" value="https://3dprinttech.github.io/3d-kalkulacka/dekuji.html">
                 <button type="submit" class="send-btn">Odeslat poptávku</button>
             </form>
         </div>
@@ -136,6 +135,8 @@
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 0, 0);
         controls.enableDamping = true;
+        
+        const standardMaterial = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
 
         function animate() {
             requestAnimationFrame(animate);
@@ -220,16 +221,12 @@
                     totalModelVolume = Math.abs(currentModelVolume / 6.0) / 1000;
 
                     if (mesh) scene.remove(mesh);
-                    const material = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 1, metalness: 0 });
-                    mesh = new THREE.Mesh(geometry, material);
-                    
+                    mesh = new THREE.Mesh(geometry, standardMaterial);
                     geometry.center();
                     const boundingBox = new THREE.Box3().setFromObject(mesh);
                     const height = boundingBox.max.z - boundingBox.min.z;
                     mesh.position.z = height / 2;
-                    
                     supportVolume = calculateSupportVolume(geometry, mesh.position.z, 45, 0.10);
-                    
                     scene.add(mesh);
                     if (!axes) {
                         axes = new THREE.AxesHelper(50);
@@ -243,7 +240,6 @@
         customUploadButton.addEventListener('click', function(e) { e.preventDefault(); ucareWidget.openDialog(); });
         
         const materialColors = { PLA: ['Černá','Šedá','Bílá','Fialová','Modrá','Zelená','Červená','Růžová','Oranžová','Žlutá','Mramor','WOOD filament'], PETG: ['Černá','Bílá'], ABS: ['Černá','Bílá'], TPU: ['Černá','Bílá','Modrá','Zelená','Červená','Oranžová','Žlutá'] };
-        // ÚPRAVA: "Mramor" je nyní spolehlivá šedá barva
         const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0x999999, 'WOOD filament': 0x654321 };
         const materialSelect = document.getElementById('material');
         const colorSelect = document.getElementById('barva');
@@ -253,7 +249,6 @@
         
         function refreshColors() { colorSelect.innerHTML = ''; (materialColors[materialSelect.value] || []).forEach(color => { const opt = document.createElement('option'); opt.value = color; opt.textContent = color; colorSelect.appendChild(opt); }); if (mesh) updateColor(); }
         
-        // ZJEDNODUŠENÁ FUNKCE: Už se nesnaží načítat textury
         function updateColor() {
             if (mesh && mesh.material) {
                 mesh.material.color.setHex(colorMap[colorSelect.value] || 0x888888);
@@ -272,6 +267,7 @@
                 return;
             }
 
+            // Tento blok kódu zůstává stejný, protože výpočty jsou již opraveny
             const densities = { PLA: 1.24, PETG: 1.27, ABS: 1.04, TPU: 1.21 };
             const material = materialSelect.value;
             const infillPercent = parseFloat(document.getElementById('pevnost').value);
@@ -308,7 +304,7 @@
             const allResultElements = document.querySelectorAll('.result-text p');
             allResultElements.forEach(el => { el.style.display = 'block'; });
             
-            document.getElementById('rozmer-vypis').textContent = `Rozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm`;
+            document.getElementById('rozmer-vypis').textContent = `Rozměr: ${meshSize.x.toFixed(1)}×${meshSize.y.toFixed(1)}×${meshSize.z.toFixed(1)} mm`;
             document.getElementById('vypocet-objem').textContent = `Hmotnost modelu: ${modelMass.toFixed(2)} g`;
             const supportEl = document.getElementById('vypocet-podpory');
             supportEl.textContent = `Hmotnost podpor (odhad): ${supportMass.toFixed(2)} g`;
@@ -319,12 +315,47 @@
             document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
             const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
             const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
-            // ÚPRAVA TEXTU VĚTY
             document.getElementById('vtipna-veta').textContent = `Tisk sice trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
             const pevnostSelect = document.getElementById('pevnost');
             const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
             document.getElementById('rekapitulace').value = `Jméno: ${document.querySelector('input[name="jmeno"]').value}\nEmail: ${document.querySelector('input[name="email"]').value}\n---\nModel: ${uploadedFileName}\nOdkaz na model: ${uploadedFileUrl}\nHmotnost modelu: ${modelMass.toFixed(2)} g\nHmotnost podpor (odhad): ${supportMass.toFixed(2)} g\nCelková hmotnost/ks: ${totalMassPerPiece.toFixed(2)} g\nOdhadovaná cena: ${castka.toFixed(2)} Kč\nOdhadovaný čas/ks: ${formatTime(totalTimeMinutes / count)}\nRozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm\nMateriál: ${materialSelect.value}\nBarva: ${colorSelect.value}\nPevnost: ${pevnostText}\nPočet kusů: ${count}`;
+        });
+
+        // --- NOVÁ LOGIKA PRO ODESLÁNÍ FORMULÁŘE A PŘESMĚROVÁNÍ ---
+        const poptavkaForm = document.getElementById('poptavka-form');
+        poptavkaForm.addEventListener('submit', function(event) {
+            event.preventDefault(); // Zabráníme výchozímu odeslání
+
+            const formData = new FormData(poptavkaForm);
+            const sendButton = poptavkaForm.querySelector('.send-btn');
+            sendButton.textContent = 'Odesílám...';
+            sendButton.disabled = true;
+
+            fetch(poptavkaForm.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'Accept': 'application/json' }
+            }).then(response => {
+                if (response.ok) {
+                    // Po úspěšném odeslání přesměrujeme na naši děkovací stránku
+                    window.location.href = './dekuji.html';
+                } else {
+                    response.json().then(data => {
+                        if (Object.hasOwn(data, 'errors')) {
+                            alert(data["errors"].map(error => error["message"]).join(", "));
+                        } else {
+                            alert('Odeslání poptávky selhalo. Zkuste to prosím znovu.');
+                        }
+                        sendButton.textContent = 'Odeslat poptávku';
+                        sendButton.disabled = false;
+                    })
+                }
+            }).catch(error => {
+                alert('Odeslání poptávky selhalo kvůli síťové chybě.');
+                sendButton.textContent = 'Odeslat poptávku';
+                sendButton.disabled = false;
+            });
         });
     </script>
 </body>
