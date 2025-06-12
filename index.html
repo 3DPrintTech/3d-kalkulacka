@@ -19,7 +19,7 @@
         .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
         #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; box-sizing: border-box; position: relative; }
         .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
-        .result-text { position: relative; z-index: 2; /* NOVÝ, VÝRAZNĚJŠÍ STÍN PRO LEPŠÍ ČITELNOST */ text-shadow: 1px 1px 2px #000, 0 0 8px rgba(0,0,0,0.9); }
+        .result-text { position: relative; z-index: 2; text-shadow: 1px 1px 2px #000, 0 0 8px rgba(0,0,0,0.9); }
         .controls-bottom { display: flex; gap: 20px; justify-content: center; }
         .bottom-left, .bottom-right { width: 360px; display: flex; flex-direction: column; gap: 10px; flex: none; }
         .upload-label, #calculate-btn { padding: 10px; border: none; border-radius: 6px; background: linear-gradient(to right, #0ff, #f0f); color: black; font-weight: bold; text-align: center; cursor: pointer; margin: 0; width: 100%; box-sizing: border-box; }
@@ -128,7 +128,6 @@
         controls.target.set(0, 0, 0);
         controls.enableDamping = true;
         
-        // NOVÉ: Načtení textury pro mramor
         const textureLoader = new THREE.TextureLoader();
         const marbleTexture = textureLoader.load('https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/main/marble_texture.jpg');
         marbleTexture.wrapS = marbleTexture.wrapT = THREE.RepeatWrapping;
@@ -172,28 +171,23 @@
             return estimatedRealVolume / 1000;
         }
 
-        // NOVÁ FUNKCE: Pro formátování času
         function formatTime(totalMinutes) {
             if (totalMinutes < 1) return "méně než minutu";
-            
             const hours = Math.floor(totalMinutes / 60);
             const minutes = Math.round(totalMinutes % 60);
-            
             let timeString = '';
             if (hours > 0) {
                 if (hours === 1) timeString += `${hours} hodina`;
                 else if (hours > 1 && hours < 5) timeString += `${hours} hodiny`;
                 else timeString += `${hours} hodin`;
             }
-            
             if (minutes > 0) {
                 if (hours > 0) timeString += ' ';
                 if (minutes === 1) timeString += `${minutes} minuta`;
                 else if (minutes > 1 && minutes < 5) timeString += `${minutes} minuty`;
                 else timeString += `${minutes} minut`;
             }
-
-            return timeString;
+            return timeString || '0 minut';
         }
 
         const ucareWidget = uploadcare.Widget('#ucare');
@@ -256,14 +250,19 @@
         
         function refreshColors() { colorSelect.innerHTML = ''; (materialColors[materialSelect.value] || []).forEach(color => { const opt = document.createElement('option'); opt.value = color; opt.textContent = color; colorSelect.appendChild(opt); }); if (mesh) updateColor(); }
         
-        // UPRAVENÁ FUNKCE: Zvládne nastavit barvu i texturu
+        // --- VYLEPŠENÁ FUNKCE PRO BARVU A TEXTURU ---
         function updateColor() {
             if (!mesh) return;
             const selectedColorName = colorSelect.value;
             
+            // Základní vlastnosti pro všechny barvy
+            mesh.material.transparent = false;
+            mesh.material.roughness = 1.0;
+
             if (selectedColorName === 'Mramor') {
                 mesh.material.map = marbleTexture;
-                mesh.material.color.set(0xffffff); // Pro texturu je nejlepší bílá jako základ
+                mesh.material.color.set(0x999999); // Tmavší šedý podklad pro kontrast
+                mesh.material.roughness = 0.7; // Mírně hladší pro lepší zobrazení textury
             } else {
                 mesh.material.map = null; // Odebereme texturu pro ostatní barvy
                 mesh.material.color.setHex(colorMap[selectedColorName] || 0x888888);
@@ -338,9 +337,8 @@
                 resultBox.insertBefore(rozmerNode, document.getElementById('vypocet-podpory'));
             }
 
-            // POUŽITÍ NOVÉ FUNKCE PRO FORMÁTOVÁNÍ ČASU
             const finalTimeText = formatTime(totalTimeMinutes);
-            const finalTimeTextJokes = formatTime(totalTimeMinutes / count); // Pro vtipnou větu použijeme čas na 1ks
+            const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
             document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
             const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
             document.getElementById('vtipna-veta').textContent = `Tisk jednoho kusu trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
