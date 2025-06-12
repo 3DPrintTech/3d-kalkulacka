@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Přesměrování Formspree</title>
+</head>
+<body>
+    <h1>Testovací formulář</h1>
+    <p>Tento formulář odesílá data na váš endpoint: mgvyawwz. Zkuste ho odeslat.</p>
+
+    <form action="https://formspree.io/f/mgvyawwz" method="POST">
+        <label>
+            Váš email:
+            <input type="email" name="email" required>
+        </label>
+        
+        <input type="hidden" name="_next" value="https://3dprinttech.github.io/3d-kalkulacka/dekuji.html">
+        
+        <button type="submit">Odeslat test</button>
+    </form>
+</body>
+</html>
