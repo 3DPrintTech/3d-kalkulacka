@@ -15,7 +15,6 @@
         .left-pane, .right-pane { width: 360px; display: flex; flex-direction: column; gap: 10px; }
         .viewer-container { height: 320px; border-radius: 8px; overflow: hidden; position: relative; background: #888; display: flex; align-items: center; justify-content: center; }
         .viewer-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; transition: filter 0.4s, opacity 0.4s; }
-        /* ÚPRAVA: Filtr je nyní světlejší */
         .viewer-bg-gray { filter: grayscale(1) brightness(0.8) blur(1px); opacity: 0.7; }
         .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
         #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; position: relative; }
@@ -124,15 +123,20 @@
         camera.up.set(0, 0, 1);
         camera.lookAt(0, 0, 0);
         
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        // --- FINÁLNÍ ÚPRAVA OSVĚTLENÍ ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
         scene.add(ambientLight);
-        const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        keyLight.position.set(1, 1, 1);
+
+        const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        keyLight.position.set(2, 1, 1); 
         camera.add(keyLight);
-        const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
-        fillLight.position.set(-1, 0.5, 0.5);
+
+        const fillLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        fillLight.position.set(-2, 1, -0.5); 
         camera.add(fillLight);
+        
         scene.add(camera);
+        // ------------------------------------
 
         const controls = new THREE.OrbitControls(camera, renderer.domElement);
         controls.target.set(0, 0, 0);
@@ -258,8 +262,7 @@
         function refreshColors() { colorSelect.innerHTML = ''; (materialColors[materialSelect.value] || []).forEach(color => { const opt = document.createElement('option'); opt.value = color; opt.textContent = color; colorSelect.appendChild(opt); }); if (mesh) updateColor(); }
         
         function updateColor() {
-            if (mesh) {
-                mesh.material = standardMaterial;
+            if (mesh && mesh.material) {
                 mesh.material.color.setHex(colorMap[colorSelect.value] || 0x888888);
             }
         }
@@ -325,7 +328,7 @@
             document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
             const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
             const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
-            document.getElementById('vtipna-veta').textContent = `Tisk sice trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
+            document.getElementById('vtipna-veta').textContent = `Tisk jednoho kusu trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
             const pevnostSelect = document.getElementById('pevnost');
             const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
