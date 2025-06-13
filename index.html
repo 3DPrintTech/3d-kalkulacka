@@ -15,7 +15,7 @@
         .left-pane, .right-pane { width: 360px; display: flex; flex-direction: column; gap: 10px; }
         .viewer-container { height: 320px; border-radius: 8px; overflow: hidden; position: relative; background: #888; display: flex; align-items: center; justify-content: center; }
         .viewer-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; transition: filter 0.4s; }
-        .viewer-bg-gray { filter: grayscale(1) brightness(0.7) blur(0.7px); opacity: 0.63; transition: filter 0.4s, opacity 0.4s; }
+        .viewer-bg-gray { filter: grayscale(1) brightness(0.7) blur(0.7px); opacity: 0.63; }
         .viewer-canvas { position: relative; z-index: 2; width: 100%; height: 100%; background: transparent; }
         #result-container { height: 320px; border-radius: 8px; overflow: hidden; background: #222; padding: 10px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; position: relative; }
         .result-bg-img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; pointer-events: none; opacity: 1; }
@@ -52,7 +52,7 @@
             <div class="layout-top">
                 <div class="left-pane">
                     <div id="viewer" class="viewer-container">
-                        <img id="viewer-bg-img" class="viewer-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/V%C4%9Bdkyn%C4%9B%20a%20holografick%C3%A1%20technologie.png" alt="laborantka hologram">
+                        <img id="viewer-bg" class="viewer-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/V%C4%9Bdkyn%C4%9B%20a%20holografick%C3%A1%20technologie.png" alt="laborantka hologram">
                     </div>
                     <label class="upload-label" for="ucare">Vybrat STL</label>
                     <input type="hidden" role="uploadcare-uploader" data-public-key="7369cc5508d1d25211e7" data-images-only="false" data-tabs="file url" data-clearable="true" id="ucare" name="ucare" accept=".stl" />
@@ -60,7 +60,7 @@
                 </div>
                 <div class="right-pane">
                     <div id="result-container">
-                        <img class="result-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/laborantka%20s%20otazniky.png" alt="laborantka s otazníky">
+                        <img id="result-bg" class="result-bg-img" src="https://raw.githubusercontent.com/3DPrintTech/3d-kalkulacka/refs/heads/main/laborantka%20s%20otazniky.png" alt="laborantka s otazníky">
                         <div class="result-text">
                             <h3>Výsledek výpočtu</h3>
                             <p id="rozmer-vypis" style="display: none;"></p>
@@ -96,12 +96,18 @@
                 <input type="text" name="jmeno" placeholder="Vaše jméno" required>
                 <input type="email" name="email" id="email-input" placeholder="Váš e-mail" required>
                 <textarea name="rekapitulace" id="rekapitulace" style="display:none;"></textarea>
+                <input type="hidden" name="_next" value="https://3dprinttech.github.io/3d-kalkulacka/dekuji.html">
                 <button type="submit" class="send-btn">Odeslat poptávku</button>
             </form>
         </div>
     </div>
 
     <script>
+        // =======================================================
+        // KONTROLNÍ VYSKAKOVACÍ OKNO
+        // =======================================================
+        alert('TESTOVACÍ VERZE - OPRAVA MRAMORU. Pokud toto vidíte, běží správný kód.');
+
         let mesh = null;
         let totalModelVolume = 0;
         let supportVolume = 0;
@@ -199,10 +205,12 @@
         const ucareWidget = uploadcare.Widget('#ucare');
         ucareWidget.onUploadComplete(function(info) {
             fileNameElement.classList.remove('error-message');
+            document.getElementById('result-bg').classList.remove('viewer-bg-gray');
+
             uploadedFileUrl = info.cdnUrl;
             uploadedFileName = info.name || 'STL model';
             fileNameElement.textContent = info.name ? info.name + ' (nahráno)' : 'Soubor nahrán';
-            document.getElementById('viewer-bg-img').classList.add('viewer-bg-gray');
+            document.getElementById('viewer-bg').classList.add('viewer-bg-gray');
             fetch(uploadedFileUrl)
                 .then(r => r.arrayBuffer())
                 .then(buffer => {
@@ -228,6 +236,10 @@
                     mesh.position.z = height / 2;
                     supportVolume = calculateSupportVolume(geometry, mesh.position.z, 45, 0.10);
                     scene.add(mesh);
+                    
+                    const modelCenter = new THREE.Vector3(0, 0, mesh.position.z);
+                    controls.target.copy(modelCenter);
+
                     if (!axes) {
                         axes = new THREE.AxesHelper(50);
                         scene.add(axes);
@@ -240,7 +252,8 @@
         customUploadButton.addEventListener('click', function(e) { e.preventDefault(); ucareWidget.openDialog(); });
         
         const materialColors = { PLA: ['Černá','Šedá','Bílá','Fialová','Modrá','Zelená','Červená','Růžová','Oranžová','Žlutá','Mramor','WOOD filament'], PETG: ['Černá','Bílá'], ABS: ['Černá','Bílá'], TPU: ['Černá','Bílá','Modrá','Zelená','Červená','Oranžová','Žlutá'] };
-        const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0x999999, 'WOOD filament': 0x654321 };
+        // ===== KONTROLNÍ ZMĚNA: Mramor je nyní červený pro test =====
+        const colorMap = { 'Černá': 0x111111, 'Šedá': 0x666666, 'Bílá': 0xffffff, 'Fialová': 0x800080, 'Modrá': 0x0000ff, 'Zelená': 0x228B22, 'Červená': 0xff0000, 'Žlutá': 0xffff00, 'Oranžová': 0xff6600, 'Růžová': 0xFF69B4, 'Mramor': 0xff0000, 'WOOD filament': 0x654321 };
         const materialSelect = document.getElementById('material');
         const colorSelect = document.getElementById('barva');
         const countSelect = document.getElementById('pocet-kusu');
@@ -251,6 +264,7 @@
         
         function updateColor() {
             if (mesh && mesh.material) {
+                // Odstranili jsme veškerou logiku pro textury, nyní jen měníme barvu
                 mesh.material.color.setHex(colorMap[colorSelect.value] || 0x888888);
             }
         }
@@ -267,7 +281,8 @@
                 return;
             }
 
-            // Tento blok kódu zůstává stejný, protože výpočty jsou již opraveny
+            document.getElementById('result-bg').classList.add('viewer-bg-gray');
+
             const densities = { PLA: 1.24, PETG: 1.27, ABS: 1.04, TPU: 1.21 };
             const material = materialSelect.value;
             const infillPercent = parseFloat(document.getElementById('pevnost').value);
@@ -315,18 +330,16 @@
             document.getElementById('vypocet-cas').textContent = `Odhadovaný čas tisku: ${finalTimeText}`;
             const finalTimeTextJokes = formatTime(totalTimeMinutes / count);
             const jokes = ['ale tiskne se sousedovi držák.', 'ale robot v kuchyni připravuje kafe.', 'ale nejsem doma.', 'ale před tebou je fronta jak na poště.', 'ale dnes je moc teplo.'];
-            document.getElementById('vtipna-veta').textContent = `Tisk sice trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
+            document.getElementById('vtipna-veta').textContent = `Tisk jednoho kusu trvá ${finalTimeTextJokes}, ${jokes[Math.floor(Math.random() * jokes.length)]}`;
             
             const pevnostSelect = document.getElementById('pevnost');
             const pevnostText = pevnostSelect.options[pevnostSelect.selectedIndex].text;
             document.getElementById('rekapitulace').value = `Jméno: ${document.querySelector('input[name="jmeno"]').value}\nEmail: ${document.querySelector('input[name="email"]').value}\n---\nModel: ${uploadedFileName}\nOdkaz na model: ${uploadedFileUrl}\nHmotnost modelu: ${modelMass.toFixed(2)} g\nHmotnost podpor (odhad): ${supportMass.toFixed(2)} g\nCelková hmotnost/ks: ${totalMassPerPiece.toFixed(2)} g\nOdhadovaná cena: ${castka.toFixed(2)} Kč\nOdhadovaný čas/ks: ${formatTime(totalTimeMinutes / count)}\nRozměr: ${meshSize.x.toFixed(1)} × ${meshSize.y.toFixed(1)} × ${meshSize.z.toFixed(1)} mm\nMateriál: ${materialSelect.value}\nBarva: ${colorSelect.value}\nPevnost: ${pevnostText}\nPočet kusů: ${count}`;
         });
 
-        // --- NOVÁ LOGIKA PRO ODESLÁNÍ FORMULÁŘE A PŘESMĚROVÁNÍ ---
         const poptavkaForm = document.getElementById('poptavka-form');
         poptavkaForm.addEventListener('submit', function(event) {
-            event.preventDefault(); // Zabráníme výchozímu odeslání
-
+            event.preventDefault();
             const formData = new FormData(poptavkaForm);
             const sendButton = poptavkaForm.querySelector('.send-btn');
             sendButton.textContent = 'Odesílám...';
@@ -338,7 +351,6 @@
                 headers: { 'Accept': 'application/json' }
             }).then(response => {
                 if (response.ok) {
-                    // Po úspěšném odeslání přesměrujeme na naši děkovací stránku
                     window.location.href = './dekuji.html';
                 } else {
                     response.json().then(data => {
